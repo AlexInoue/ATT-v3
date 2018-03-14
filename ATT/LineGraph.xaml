@@ -5,9 +5,102 @@
     xmlns:local="using:ATT"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:oxy="using:OxyPlot.Windows"
     mc:Ignorable="d">
+    
+    <Page.DataContext>
+        <local:MainViewModel/>
+    </Page.DataContext>
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Margin="0,2,0,-2">
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="30" />
+        </Grid.RowDefinitions>
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="350" />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid x:Name="controlGrid" Grid.Column="0" VerticalAlignment="Center">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="70"/>
+                <RowDefinition Height="70"/>
+                <RowDefinition Height="70"/>
+                <RowDefinition Height="70"/>
+                <RowDefinition Height="60"/>
+                <RowDefinition Height="70"/>
+                <RowDefinition Height="60"/>
+                <RowDefinition Height="20"/>
+                <RowDefinition Height="50"/>
+                <RowDefinition Height="80"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
 
+            <Grid Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30"></ColumnDefinition>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+
+                <ToggleSwitch x:Name="streamSwitch" Grid.Column="1" Header="Stream" HorizontalAlignment="Left" VerticalAlignment="Center" Toggled="streamSwitch_Toggled"/>
+                <ToggleSwitch x:Name="recordSwitch" Grid.Column="2" Header="Record" HorizontalAlignment="Left" VerticalAlignment="Center" Toggled="recordSwitch_Toggled"/>
+                <ToggleSwitch x:Name="angleSwitch" Grid.Column="3" Header="Angle Mode" HorizontalAlignment="Left" VerticalAlignment="Center" Toggled="angleSwitch_Toggled" />
+            </Grid>
+            <Grid Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <CheckBox Grid.Column="0"  x:Name="wCheckbox" Content="W" IsChecked="False" HorizontalAlignment="Center" Margin="50,0,0,0" Checked="wChecked"/>
+                <CheckBox Grid.Column="1" x:Name="xyzCheckbox" Content="XYZ" IsChecked="False" HorizontalAlignment="Center" Checked="xyzChecked"/>
+            </Grid>
+
+            <TextBlock Text="Frequency:" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" Height = "60"/>
+            <TextBlock Text="--" Grid.Row="3" x:Name="FrequencyTextBlock1" Foreground="Orange" Grid.Column="0" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
+            <TextBlock Text="--" Grid.Row="3" x:Name="FrequencyTextBlock2" Foreground="Blue" Grid.Column="1" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
+            <TextBlock Text="Battery:" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" Height = "60"/>
+            <TextBlock Text="--" Grid.Row="5" x:Name="BatteryTextBlock1" Foreground="Orange" Grid.Column="0" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
+            <TextBlock Text="--" Grid.Row="5" x:Name="BatteryTextBlock2" Foreground="Blue" Grid.Column="1" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
+            <Grid Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="Save" Grid.Column="0" Content="Save" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Save_Click" Height="50" Background="Green" Width="150"/>
+                <Button x:Name="Clear" Grid.Column="1" Content="Clear" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Clear_Click" Height="50" Background="Gray" Width="150"/>
+            </Grid>
+
+            <Button x:Name="center" Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Content="Center" HorizontalAlignment="Stretch" VerticalAlignment="Center" Click="Center_Click" Height="50" Background="MediumPurple" Width="300"/>
+        </Grid>
+
+
+        <Button x:Name="back" Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" Content="Back" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="back_Click"/>
+        <TextBlock Text="--" x:Name="AverageFrequencyTextBlock" Grid.Column="0" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="77,-700,0,0" Height = "60"/>
+
+
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="100"/>
+                <RowDefinition Height="150"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock Text="Angle Measurement" Grid.Row="0" VerticalAlignment="Center" FontSize="50" HorizontalAlignment="Center"/>
+            <Grid x:Name="dataGrid" Grid.Row="1" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"  Text="Sensor 1 Data" x:Name="DataTextBlock1" Foreground="Orange" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
+                <TextBlock Grid.Column="1" Text="Sensor 2 Data" x:Name="DataTextBlock2" Foreground="Blue" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
+                <TextBlock Grid.Column="2" Text="Euler Angle Data" x:Name="DataTextBlock3" Foreground="Red" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
+            </Grid>
+            <oxy:PlotView Model="{Binding MyModel}" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+        </Grid>
     </Grid>
 </Page>
