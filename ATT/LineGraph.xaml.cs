@@ -124,17 +124,14 @@ namespace ATT {
         bool[] shouldCenter = { false, false }; // take reference quaternion
         bool record = false; // keeps track of if record switch is on -- avoids threading error when actually accessing switch
         bool angleMode = false; // ^ same
-        Stopwatch myStopWatch = new Stopwatch(); // don't think this gets used anymore
         int[] freq = { 0, 0 };  // stores number of samples received, reset every second
         Quaternion[] refQuats = new Quaternion[2]; // reference quaternions
         PlotModel model;
         int[] samples = { 0, 0 }; // stores number of samples received 
         int secs = 0;
         StringBuilder[] csv = { new StringBuilder(), new StringBuilder() }; // data storage, more efficient than string concatenation
-        TextBlock[] textblocks = new TextBlock[3];
+        TextBlock[] textblocks = new TextBlock[4];
         private System.Threading.Timer timer1; // used for triggering UI updates every second
-        ISensorFusionBosch sensorFusion;
-        ISensorFusionBosch sensorFusion2;
 
         #endregion
 
@@ -161,9 +158,9 @@ namespace ATT {
                 Macs[i].Text = metawears[i].MacAddress.ToString(); // update UI to show mac addresses of sensors
             }
 
+            //TODO: make this not hardcoded
             textblocks[0] = DataTextBlock1;
             textblocks[1] = DataTextBlock2;
-            textblocks[2] = DataTextBlock3;
 
             InitBatteryTimer();
 
@@ -243,7 +240,12 @@ namespace ATT {
 
         //}
 
-        private async void quaternionStreamRoutine(IData data) {
+            /// <summary>
+            ///  Routine used for collection of Quaternions data of Sensors. In the end, calls a new routine to plot processed Data.
+            /// </summary>
+            /// <param name="data"> Quaternion data collected by the sensor</param>
+            /// <param name="sensorNumber"> number of the sensor used in project, starting by 0 for 1, 1 for 2 and etc </param>
+        private async Task quaternionStreamRoutine(IData data, int sensorNumber) {
             if (isRunning) {
                 var quat = data.Value<Quaternion>();
                 var time = data.FormattedTimestamp.ToString();
@@ -254,28 +256,28 @@ namespace ATT {
 
                 // Store data point
                 if (record) {
-                    String newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}{12}", samples[0], year, month, day, hour, minute, second, milli, quat.W, quat.X, quat.Y, quat.Z, Environment.NewLine);
-                    addPoint(newLine, 0);
+                    String newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}{12}", samples[sensorNumber], year, month, day, hour, minute, second, milli, quat.W, quat.X, quat.Y, quat.Z, Environment.NewLine);
+                    addPoint(newLine, sensorNumber);
                 }
                 // Update counters
-                samples[0]++;
-                freq[0]++;
+                samples[sensorNumber]++;
+                freq[sensorNumber]++;
 
                 // Save reference quaternion
-                if (shouldCenter[0]) {
-                    refQuats[0] = quat;
-                    shouldCenter[0] = false;
-                    centered[0] = true;
+                if (shouldCenter[sensorNumber]) {
+                    refQuats[sensorNumber] = quat;
+                    shouldCenter[sensorNumber] = false;
+                    centered[sensorNumber] = true;
                 }
 
                 double angle = 0;
                 double denom = 1;
 
-                if (centered[0]) {
-                    WindowsQuaternion a = convertToWindowsQuaternion(refQuats[0]);
+                if (centered[sensorNumber]) {
+                    WindowsQuaternion a = convertToWindowsQuaternion(refQuats[sensorNumber]);
                     WindowsQuaternion b = convertToWindowsQuaternion(quat);
 
-                    quat = centerData(refQuats[0], quat);
+                    quat = centerData(refQuats[sensorNumber], quat);
                     angle = (angleMode) ? 2 * Math.Acos(WindowsQuaternion.Dot(a, b) / (a.Length() * b.Length())) * (180 / Math.PI) : 0;
                 }
                 else if (angleMode) {
@@ -285,27 +287,33 @@ namespace ATT {
                 }
                 angle = (angle > 180) ? 360 - angle : angle;
 
-                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotQuaterniunValues(angle, quat, denom) );
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotQuaterniunValues(angle, quat, denom, sensorNumber) );
             }
         }
-
-        private async void plotQuaterniunValues(double angle, Quaternion quat, double denom ) {
+        /// <summary>
+        ///  Plots the data optained by the sensor.
+        /// </summary>
+        /// <param name="angle"> Quaternion angle, obtained by the W component</param>
+        /// <param name="quat"> Quaternion vector measured</param>
+        /// <param name="denom"> Denom value calculated</param>
+        /// <param name="sensorNumber"> Number of the sensor used</param>
+        private void plotQuaterniunValues(double angle, Quaternion quat, double denom, int sensorNumber ) {
             // Add values to plot
             if ((bool)wCheckbox.IsChecked) {
-                (model.Series[0] as LineSeries).Points.Add(new DataPoint(samples[0], (angleMode) ? angle : quat.W));
+                (model.Series[5*sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], (angleMode) ? angle : quat.W));
             }
             if ((bool)xyzCheckbox.IsChecked) {
-                (model.Series[1] as LineSeries).Points.Add(new DataPoint(samples[0], quat.X / denom));
-                (model.Series[2] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Y / denom));
-                (model.Series[3] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Z / denom));
+                (model.Series[5 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], quat.X / denom));
+                (model.Series[5 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], quat.Y / denom));
+                (model.Series[5 * sensorNumber + 3] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], quat.Z / denom));
             }
 
             // Display values numerically
             double[] values = { angleMode ? angle : quat.W, (quat.X / denom), (quat.Y / denom), (quat.Z / denom) };
             String[] labels = { angleMode ? "Angle: " : "W: ", "\nX: ", "\nY: ", "\nY: " };
-            setText(calculateEulerAngles(quat), 2);
+            //setText(calculateEulerAngles(quat), sensorNumber + 2);
             String s = createOrientationText(labels, values);
-            setText(s, 0);
+            setText(s, sensorNumber);
 
             // Reset axes as needed
             if ((bool)wCheckbox.IsChecked || (bool)xyzCheckbox.IsChecked) {
@@ -324,122 +332,26 @@ namespace ATT {
 
         private async void streamSwitch_Toggled(object sender, RoutedEventArgs e) {
             if (streamSwitch.IsOn) {
-                myStopWatch.Start();
                 isRunning = true;
-
                 Clear_Click(null, null);
                 samples[0] = 0;
                 samples[1] = 0;
 
-                sensorFusions = new ISensorFusionBosch[2];
-
-                sensorFusion = metawears[0].GetModule<ISensorFusionBosch>();
-                sensorFusion.Configure();  // default settings is NDoF mode with +/-16g acc range and 2000dps gyro range
-
-                //await sensorFusion.LinearAcceleration.AddRouteAsync(source => source.Stream(async data => updateAccelerometer(data))); //accelerometer tests
-
-                // ----------------------------------------------------- SENSOR 1 --------------------------------------------------------------
-                await sensorFusion.Quaternion.AddRouteAsync(source => source.Stream(async data => quaternionStreamRoutine(data)));
-
-                sensorFusion.Quaternion.Start();
-                //sensorFusion.LinearAcceleration.Start();         //accelerometer tests
-                sensorFusion.Start();
-
-                // ----------------------------------------------------- SENSOR 2 --------------------------------------------------------------
-                if (numBoards == 2) {
-                    sensorFusion2 = metawears[1].GetModule<ISensorFusionBosch>();
-                    sensorFusion2.Configure();  // default settings is NDoF mode with +/-16g acc range and 2000dps gyro range
-
-                    await sensorFusion2.Quaternion.AddRouteAsync(source => source.Stream(async data =>
-                    {
-                        var quat = data.Value<Quaternion>();
-                        // Store data point
-                        if (record) {
-                            String newLine = string.Format("{0},{1},{2},{3},{4}{5}", samples[0], quat.W, quat.X, quat.Y, quat.Z, Environment.NewLine);
-                            addPoint(newLine, 1);
-                        }
-
-                        if (isRunning) {
-                            // Update counters
-                            samples[1]++;
-                            freq[1]++;
-
-                            // Center quaternion if needed
-                            if (shouldCenter[1]) {
-                                refQuats[1] = quat;
-                                shouldCenter[1] = false;
-                                centered[1] = true;
-                            }
-
-                            double angle;
-
-                            if (centered[1]) {
-                                WindowsQuaternion a = convertToWindowsQuaternion(refQuats[1]);
-                                WindowsQuaternion b = convertToWindowsQuaternion(quat);
-
-                                angle = 2 * Math.Acos(WindowsQuaternion.Dot(a, b) / (a.Length() * b.Length())) * (180 / Math.PI); ;
-
-                                quat = centerData(refQuats[1], quat);
-                                //System.Diagnostics.Debug.WriteLine(finalQuat.w.ToString() + "   " + finalQuat.x.ToString() + "   " + finalQuat.y.ToString() + "   " + finalQuat.z.ToString());
-                            }
-                            else {
-                                angle = 2 * Math.Acos(quat.W) * (180 / Math.PI);
-                            }
-
-                            double denom = Math.Sqrt(1 - Math.Pow(quat.W, 2));
-
-                            if (denom < 0.001) {
-                                denom = 1;
-                            }
-                            if (angle > 250) {
-                                angle = 360 - angle;
-                            }
-                            //var secs = myStopWatch.ElapsedMilliseconds * 0.001;
-                            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-                            {
-                                // Display quaternion
-                                String s;
-                                // return;
-                                if (angleSwitch.IsOn) {
-                                    if ((bool)wCheckbox.IsChecked) {
-                                        (model.Series[4] as LineSeries).Points.Add(new DataPoint(samples[0], angle));
-                                    }
-                                    if ((bool)xyzCheckbox.IsChecked) {
-                                        (model.Series[5] as LineSeries).Points.Add(new DataPoint(samples[0], quat.X / denom));
-                                        (model.Series[6] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Y / denom));
-                                        (model.Series[7] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Z / denom));
-                                    }
-
-                                    s = "Angle: " + angle.ToString() + "\nX: " + (quat.X / denom).ToString() + "\nY: " + (quat.Y / denom).ToString() + "\nZ: " + (quat.Z / denom).ToString();
-                                }
-                                else {
-                                    if ((bool)wCheckbox.IsChecked) {
-                                        (model.Series[4] as LineSeries).Points.Add(new DataPoint(samples[0], quat.W));
-                                    }
-                                    if ((bool)xyzCheckbox.IsChecked) {
-                                        (model.Series[5] as LineSeries).Points.Add(new DataPoint(samples[0], quat.X));
-                                        (model.Series[6] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Y));
-                                        (model.Series[7] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Z));
-                                    }
-
-                                    s = "W: " + quat.W.ToString() + "\nX: " + quat.X.ToString() + "\nY: " + quat.Y.ToString() + "\nZ: " + quat.Z.ToString();
-                                }
-                                setText(s, 1);
-                            });
-                        }
-                    }));
-                    sensorFusion2.Quaternion.Start();
-                    sensorFusion2.Start();
-                    print("Sensor fusion should be running!");
+                sensorFusions = new ISensorFusionBosch[numBoards];
+                for (var j = 0; j < numBoards; j++) {
+                    var i = j;
+                    sensorFusions[i] = metawears[i].GetModule<ISensorFusionBosch>();
+                    sensorFusions[i].Configure(); // default settings is NDoF mode with +/-16g acc range and 2000dps gyro range
+                    await sensorFusions[i].Quaternion.AddRouteAsync(source => source.Stream(async data => await quaternionStreamRoutine(data, i)));
+                    sensorFusions[i].Quaternion.Start();
+                    sensorFusions[i].Start();
                 }
-
+                print("Sensor fusion should be running!");
                 InitFreqTimer();
                 Clear.Background = new SolidColorBrush(Windows.UI.Colors.Red);
             }
             else {
                 isRunning = false;
-                sensorFusions[0] = sensorFusion;
-                sensorFusions[1] = sensorFusion2;
                 for (var i = 0; i < numBoards; i++) {
                     sensorFusions[i].Stop();
                     sensorFusions[i].Quaternion.Stop();
@@ -447,13 +359,11 @@ namespace ATT {
 
                     freq[i] = 0;
                 }
-
                 timer1.Dispose();
-                myStopWatch.Stop();
-                myStopWatch.Reset();
             }
         }
 
+        //Function that calculate axes rotations by using quaternions
         private String calculateEulerAngles(Quaternion quat) {
             double roll, pitch, yaw;
             // roll (x-axis rotation)
