@@ -7,7 +7,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:oxy="using:OxyPlot.Windows"
     mc:Ignorable="d">
-    
+
     <Page.DataContext>
         <local:MainViewModel/>
     </Page.DataContext>
@@ -33,6 +33,7 @@
                 <RowDefinition Height="20"/>
                 <RowDefinition Height="50"/>
                 <RowDefinition Height="80"/>
+
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition />
@@ -76,6 +77,21 @@
             </Grid>
 
             <Button x:Name="center" Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Content="Center" HorizontalAlignment="Stretch" VerticalAlignment="Center" Click="Center_Click" Height="50" Background="MediumPurple" Width="300"/>
+            <Grid Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="9">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Date" HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Column="0"/>
+                <TextBlock Text="Experiment #" HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Column="1"/>
+                <TextBox Grid.Row="1" x:Name="dateTextBox" Grid.Column="0" Text="Date" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="1" x:Name="numberTextBox" Grid.Column="1" Text="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+
         </Grid>
 
 
@@ -86,19 +102,27 @@
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="100"/>
-                <RowDefinition Height="150"/>
+                <RowDefinition Height="230"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             <TextBlock Text="Angle Measurement" Grid.Row="0" VerticalAlignment="Center" FontSize="50" HorizontalAlignment="Center"/>
             <Grid x:Name="dataGrid" Grid.Row="1" VerticalAlignment="Center">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="50"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0"  Text="Sensor 1 Data" x:Name="DataTextBlock1" Foreground="Orange" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
-                <TextBlock Grid.Column="1" Text="Sensor 2 Data" x:Name="DataTextBlock2" Foreground="Blue" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
-                <TextBlock Grid.Column="2" Text="Euler Angle Data" x:Name="DataTextBlock3" Foreground="Red" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="Mac1" x:Name="Mac1" VerticalAlignment="Center" Foreground="Orange"  HorizontalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Grid.Row="0" Text="Mac2" x:Name="Mac2" VerticalAlignment="Center" Foreground="Blue" HorizontalAlignment="Center"/>
+                <TextBox Grid.Column="0" Grid.Row="1" Text="sensor1" x:Name="Name1" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <TextBox Grid.Column="1" Grid.Row="1" Text="sensor2" x:Name="Name2" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <TextBlock Grid.Column="0" Grid.Row="2" Text="Sensor 1 Data" x:Name="DataTextBlock1" Foreground="Orange" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
+                <TextBlock Grid.Column="1" Grid.Row="3" Text="Sensor 2 Data" x:Name="DataTextBlock2" Foreground="Blue" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
             </Grid>
             <oxy:PlotView Model="{Binding MyModel}" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
         </Grid>
