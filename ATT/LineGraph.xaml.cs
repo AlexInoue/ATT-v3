@@ -31,6 +31,8 @@ using System.Text;
 // O modelo de item de Página em Branco está documentado em https://go.microsoft.com/fwlink/?LinkId=234238
 
 namespace ATT {
+
+    #region complimentary class: Graphic plotter
     public class MainViewModel {
         public const int MAX_DATA_SAMPLES = 960;
         public const int MAX_SECONDS = 10;
@@ -102,36 +104,40 @@ namespace ATT {
 
         public PlotModel MyModel { get; private set; }
     }
+    #endregion
 
     /// <summary>
-    /// An empty page that can be used on its own or navigated to within a Frame.
+    /// Main page of the application. Displays device information and processed and collected data.
     /// </summary>
     public sealed partial class LineGraph : Page {
 
+        #region fields
         // private IMetaWearBoard metawear;
         private ISensorFusionBosch[] sensorFusions;
 
         int numBoards = 1;
         //private IntPtr cppBoard;
-        private IMetaWearBoard[] metawears;
-        bool startNext = true;
-        bool isRunning = false;
-        bool[] centered = { false, false };
-        bool[] shouldCenter = { false, false };
-        bool record = false;
-        bool angleMode = false;
-        Stopwatch myStopWatch = new Stopwatch();
-        List<DataPoint>[] dataPoints = { new List<DataPoint>(), new List<DataPoint>() };
-        int[] freq = { 0, 0 };
-        Quaternion[] centerQuats = new Quaternion[2];
+        private IMetaWearBoard[] metawears; // board storage
+        bool startNext = true; 
+        bool isRunning = false; // avoids weird timing errors with switching streaming on and off
+        bool[] centered = { false, false }; // sensor has ben centered
+        bool[] shouldCenter = { false, false }; // take reference quaternion
+        bool record = false; // keeps track of if record switch is on -- avoids threading error when actually accessing switch
+        bool angleMode = false; // ^ same
+        Stopwatch myStopWatch = new Stopwatch(); // don't think this gets used anymore
+        int[] freq = { 0, 0 };  // stores number of samples received, reset every second
+        Quaternion[] refQuats = new Quaternion[2]; // reference quaternions
         PlotModel model;
-        int[] samples = { 0, 0 };
+        int[] samples = { 0, 0 }; // stores number of samples received 
         int secs = 0;
-        StringBuilder[] csv = { new StringBuilder(), new StringBuilder() };
+        StringBuilder[] csv = { new StringBuilder(), new StringBuilder() }; // data storage, more efficient than string concatenation
         TextBlock[] textblocks = new TextBlock[3];
-        private System.Threading.Timer timer1;
+        private System.Threading.Timer timer1; // used for triggering UI updates every second
         ISensorFusionBosch sensorFusion;
         ISensorFusionBosch sensorFusion2;
+
+        #endregion
+
 
         public LineGraph() {
             InitializeComponent();
@@ -139,16 +145,20 @@ namespace ATT {
 
         protected async override void OnNavigatedTo(NavigationEventArgs e) {
             base.OnNavigatedTo(e);
-            print(e.Parameter.ToString());
             var devices = e.Parameter as BluetoothLEDevice[];
             numBoards = devices.Length;
             metawears = new IMetaWearBoard[numBoards];
+            dateTextBox.Text = DateTime.Now.ToString("yyMMdd");
+            AverageFrequencyTextBlock.Text = "";
+            TextBlock[] Macs = { Mac1, Mac2 };
 
             for (var i = 0; i < numBoards; i++) {
                 // Initialize boards and enable high frequency streaming
                 metawears[i] = MbientLab.MetaWear.Win10.Application.GetMetaWearBoard(devices[i]);
                 var settings = metawears[i].GetModule<ISettings>();
                 settings.EditBleConnParams(maxConnInterval: 7.5f);
+
+                Macs[i].Text = metawears[i].MacAddress.ToString(); // update UI to show mac addresses of sensors
             }
 
             textblocks[0] = DataTextBlock1;
@@ -162,11 +172,12 @@ namespace ATT {
             }
 
             model = (DataContext as MainViewModel).MyModel;
-            // Settings settings = metawears[0].getModule(Settings.class);
         }
 
         public void removeBoardTwoFormatting() {
-            dataGrid.Children.RemoveAt(1);
+            dataGrid.Children.Remove(Mac2);
+            dataGrid.Children.Remove(DataTextBlock2);
+            dataGrid.Children.Remove(Name2);
             dataGrid.ColumnDefinitions.RemoveAt(1);
 
             controlGrid.Children.Remove(FrequencyTextBlock2);
@@ -174,14 +185,17 @@ namespace ATT {
             controlGrid.ColumnDefinitions.RemoveAt(1);
         }
 
+        // Initialize timer that causes displaySampleFreq() to be called every second.
         public void InitFreqTimer() {
             timer1 = new System.Threading.Timer(displaySampleFreq, null, 0, 1000);
         }
 
+        // Initialize timer that causes displayBatteryLevel() to be called every 10 seconds.
         public void InitBatteryTimer() {
             timer1 = new System.Threading.Timer(displayBatteryLevel, null, 0, 10000);
         }
 
+        // Display the battery level for each sensor as a percent.
         public async void displayBatteryLevel(Object state) {
             TextBlock[] textblocks = { BatteryTextBlock1, BatteryTextBlock2 };
             for (var i = 0; i < numBoards; i++) {
@@ -192,6 +206,7 @@ namespace ATT {
             }
         }
 
+        // Display the sample frequency for each sensor in Hz.
         private async void displaySampleFreq(Object state) {
             secs += 1;
             await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => {
@@ -204,6 +219,7 @@ namespace ATT {
             freq[1] = 0;
         }
 
+        // Go back to the main page (sensor selection)
         private async void back_Click(object sender, RoutedEventArgs e) {
             for (var i = 0; i < numBoards; i++) {
                 if (!metawears[i].InMetaBootMode) {
@@ -214,15 +230,18 @@ namespace ATT {
             Frame.GoBack();
         }
 
-        void setText(String s, int sensorNumber) {
+        // Display quaternion information for each sensor in text form.
+        private void setText(String s, int sensorNumber) {
             Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => { textblocks[sensorNumber].Text = s; });
         }
 
-        private void updateAccelerometer(IData data) {
-            var accel = data.Value<Acceleration>();
-            setText(accel.ToString(), 0);
 
-        }
+        //accelerometer tests
+        //private void updateAccelerometer(IData data) {
+        //    var accel = data.Value<Acceleration>();
+        //    setText(accel.ToString(), 0);
+
+        //}
 
         private async void streamSwitch_Toggled(object sender, RoutedEventArgs e) {
             if (streamSwitch.IsOn) {
@@ -237,28 +256,25 @@ namespace ATT {
 
                 sensorFusion = metawears[0].GetModule<ISensorFusionBosch>();
                 sensorFusion.Configure();  // default settings is NDoF mode with +/-16g acc range and 2000dps gyro range
-                await sensorFusion.LinearAcceleration.AddRouteAsync(source => source.Stream(async data => updateAccelerometer(data)));
+
+                //await sensorFusion.LinearAcceleration.AddRouteAsync(source => source.Stream(async data => updateAccelerometer(data))); //accelerometer tests
+
+                // ----------------------------------------------------- SENSOR 1 --------------------------------------------------------------
                 await sensorFusion.Quaternion.AddRouteAsync(source => source.Stream(async data =>
                 {
                     if (isRunning) {
                         var quat = data.Value<Quaternion>();
                         var time = data.FormattedTimestamp.ToString();
 
-                        var year = time.Substring(0, 4);
-                        var month = time.Substring(5, 2);
-                        var day = time.Substring(8, 2);
-                        var hour = time.Substring(11, 2);
-                        var minute = time.Substring(14, 2);
-                        var second = time.Substring(17, 2);
+                        var year = time.Substring(0, 4); var month = time.Substring(5, 2); var day = time.Substring(8, 2);
+                        var hour = time.Substring(11, 2); var minute = time.Substring(14, 2); var second = time.Substring(17, 2);
                         var milli = time.Substring(20, 3);
-                        //print(time.ToString());
-                        //print(time[0].ToString());
+
                         // Store data point
                         if (record) {
                             String newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}{12}", samples[0], year, month, day, hour, minute, second, milli, quat.W, quat.X, quat.Y, quat.Z, Environment.NewLine);
                             addPoint(newLine, 0);
                         }
-                        //var secs = myStopWatch.ElapsedMilliseconds * 0.001;
 
                         // Update counters
                         samples[0]++;
@@ -266,7 +282,7 @@ namespace ATT {
 
                         // Save reference quaternion
                         if (shouldCenter[0]) {
-                            centerQuats[0] = quat;
+                            refQuats[0] = quat;
                             shouldCenter[0] = false;
                             centered[0] = true;
                         }
@@ -275,18 +291,18 @@ namespace ATT {
                         double denom = 1;
 
                         if (centered[0]) {
-                            WindowsQuaternion a = convertToWindowsQuaternion(centerQuats[0]);
+                            WindowsQuaternion a = convertToWindowsQuaternion(refQuats[0]);
                             WindowsQuaternion b = convertToWindowsQuaternion(quat);
 
-                            quat = centerData(centerQuats[0], quat);
+                            quat = centerData(refQuats[0], quat);
                             angle = (angleMode) ? 2 * Math.Acos(WindowsQuaternion.Dot(a, b) / (a.Length() * b.Length())) * (180 / Math.PI) : 0;
                         }
                         else if (angleMode) {
                             angle = 2 * Math.Acos(quat.W) * (180 / Math.PI);
-                            angle = (angle > 250) ? 360 - angle : angle;
                             denom = Math.Sqrt(1 - Math.Pow(quat.W, 2));
                             denom = (denom < 0.001) ? 1 : denom;  // avoid divide by zero type errors
                         }
+                        angle = (angle > 180) ? 360 - angle : angle;
 
                         await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                         {
@@ -323,10 +339,12 @@ namespace ATT {
                         });
                     }
                 }));
+
                 sensorFusion.Quaternion.Start();
-                sensorFusion.LinearAcceleration.Start();
+                //sensorFusion.LinearAcceleration.Start();         //accelerometer tests
                 sensorFusion.Start();
 
+                // ----------------------------------------------------- SENSOR 2 --------------------------------------------------------------
                 if (numBoards == 2) {
                     sensorFusion2 = metawears[1].GetModule<ISensorFusionBosch>();
                     sensorFusion2.Configure();  // default settings is NDoF mode with +/-16g acc range and 2000dps gyro range
@@ -347,7 +365,7 @@ namespace ATT {
 
                             // Center quaternion if needed
                             if (shouldCenter[1]) {
-                                centerQuats[1] = quat;
+                                refQuats[1] = quat;
                                 shouldCenter[1] = false;
                                 centered[1] = true;
                             }
@@ -355,12 +373,12 @@ namespace ATT {
                             double angle;
 
                             if (centered[1]) {
-                                WindowsQuaternion a = convertToWindowsQuaternion(centerQuats[1]);
+                                WindowsQuaternion a = convertToWindowsQuaternion(refQuats[1]);
                                 WindowsQuaternion b = convertToWindowsQuaternion(quat);
 
                                 angle = 2 * Math.Acos(WindowsQuaternion.Dot(a, b) / (a.Length() * b.Length())) * (180 / Math.PI); ;
 
-                                quat = centerData(centerQuats[1], quat);
+                                quat = centerData(refQuats[1], quat);
                                 //System.Diagnostics.Debug.WriteLine(finalQuat.w.ToString() + "   " + finalQuat.x.ToString() + "   " + finalQuat.y.ToString() + "   " + finalQuat.z.ToString());
                             }
                             else {
@@ -456,6 +474,7 @@ namespace ATT {
             return "x: " + roll.ToString() + "°\ny: " + pitch.ToString() + "°\nz: " + yaw.ToString() + "°";
         }
 
+        // silly function used to make the live orientation text
         public String createOrientationText(String[] labels, double[] values) {
             StringBuilder s = new StringBuilder();
             for (int i = 0; i < values.Length; i++) {
@@ -465,14 +484,17 @@ namespace ATT {
             return s.ToString();
         }
 
+        // Reset y axis and store angleSwitch state.
         public async void angleSwitch_Toggled(Object sender, RoutedEventArgs e) {
             resetYAxis();
             angleMode = angleSwitch.IsOn;
         }
 
+        // Store recordSwitch state.
         public async void recordSwitch_Toggled(Object sender, RoutedEventArgs e) {
             record = recordSwitch.IsOn;
         }
+
 
         public async void wChecked(Object sender, RoutedEventArgs e) {
             resetYAxis();
@@ -482,6 +504,7 @@ namespace ATT {
             resetYAxis();
         }
 
+        // Change axes to adjust for new maximum values.
         public void resetYAxis() {
             model.InvalidatePlot(true);
             model.Axes[0].Reset();
@@ -494,6 +517,7 @@ namespace ATT {
             model.Axes[0].Zoom(model.Axes[0].Minimum, model.Axes[0].Maximum);
         }
 
+        // Center quaternion q2 with q1 as reference.
         Quaternion centerData(Quaternion q1, Quaternion q2) {
             WindowsQuaternion q1w = convertToWindowsQuaternion(q1);
             WindowsQuaternion q2w = convertToWindowsQuaternion(q2);
@@ -504,28 +528,31 @@ namespace ATT {
             return convertToQuaternion(center);
         }
 
+        // Converts mbientlab quaternion object to Windows quaternion object.
         WindowsQuaternion convertToWindowsQuaternion(Quaternion q) {
             WindowsQuaternion qw = new WindowsQuaternion(q.W, q.X, q.Y, q.Z);
             return qw;
         }
 
+        // Converts Windows quaternion object to mbientlab quaternion object.
         Quaternion convertToQuaternion(WindowsQuaternion wq) {
             Quaternion quat = new Quaternion(wq.W, wq.X, wq.Y, wq.Z);
             return quat;
         }
 
+        // Save stored data and record and stream switches
         private void Save_Click(object sender, RoutedEventArgs e) {
             saveData();
         }
 
+        // Save all recorded data.
         private async Task saveData(int sensorNumber = 1) {
             print("save initiated for sensor: ");
             print(sensorNumber.ToString());
 
             var savePicker = new Windows.Storage.Pickers.FileSavePicker();
             savePicker.FileTypeChoices.Add("Plain Text", new List<string>() { ".txt" });
-            savePicker.SuggestedFileName = "New Document";
-
+            savePicker.SuggestedFileName = dateTextBox.Text + "_exp" + numberTextBox.Text + "_" + ((sensorNumber == 1) ? Name1.Text : Name2.Text);
             Windows.Storage.StorageFile file = await savePicker.PickSaveFileAsync();
             if (file != null) {
                 Windows.Storage.CachedFileManager.DeferUpdates(file);
@@ -534,8 +561,11 @@ namespace ATT {
                 Windows.Storage.Provider.FileUpdateStatus status =
                     await Windows.Storage.CachedFileManager.CompleteUpdatesAsync(file);
                 if (status == Windows.Storage.Provider.FileUpdateStatus.Complete) {
-                    if (sensorNumber == 1 && numBoards == 2) {
-                        saveData(2);
+                    if (sensorNumber == numBoards) {
+                        numberTextBox.Text = (Int32.Parse(numberTextBox.Text) + 1).ToString();
+                    }
+                    else {
+                        saveData(sensorNumber + 1);
                     }
                 }
                 else {
