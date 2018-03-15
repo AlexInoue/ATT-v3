@@ -118,7 +118,8 @@ namespace ATT {
         int numBoards = 1;
         //private IntPtr cppBoard;
         private IMetaWearBoard[] metawears; // board storage
-        bool startNext = true; 
+        private EulerAngles eulerAngles = new EulerAngles();
+        bool startNext = true;
         bool isRunning = false; // avoids weird timing errors with switching streaming on and off
         bool[] centered = { false, false }; // sensor has ben centered
         bool[] shouldCenter = { false, false }; // take reference quaternion
@@ -161,6 +162,8 @@ namespace ATT {
             //TODO: make this not hardcoded
             textblocks[0] = DataTextBlock1;
             textblocks[1] = DataTextBlock2;
+            textblocks[2] = DataTextBlock3;
+            textblocks[3] = DataTextBlock4;
 
             InitBatteryTimer();
 
@@ -240,11 +243,11 @@ namespace ATT {
 
         //}
 
-            /// <summary>
-            ///  Routine used for collection of Quaternions data of Sensors. In the end, calls a new routine to plot processed Data.
-            /// </summary>
-            /// <param name="data"> Quaternion data collected by the sensor</param>
-            /// <param name="sensorNumber"> number of the sensor used in project, starting by 0 for 1, 1 for 2 and etc </param>
+        /// <summary>
+        ///  Routine used for collection of Quaternions data of Sensors. In the end, calls a new routine to plot processed Data.
+        /// </summary>
+        /// <param name="data"> Quaternion data collected by the sensor</param>
+        /// <param name="sensorNumber"> number of the sensor used in project, starting by 0 for 1, 1 for 2 and etc </param>
         private async Task quaternionStreamRoutine(IData data, int sensorNumber) {
             if (isRunning) {
                 var quat = data.Value<Quaternion>();
@@ -287,7 +290,7 @@ namespace ATT {
                 }
                 angle = (angle > 180) ? 360 - angle : angle;
 
-                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotQuaterniunValues(angle, quat, denom, sensorNumber) );
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotQuaterniunValues(angle, quat, denom, sensorNumber));
             }
         }
         /// <summary>
@@ -297,10 +300,10 @@ namespace ATT {
         /// <param name="quat"> Quaternion vector measured</param>
         /// <param name="denom"> Denom value calculated</param>
         /// <param name="sensorNumber"> Number of the sensor used</param>
-        private void plotQuaterniunValues(double angle, Quaternion quat, double denom, int sensorNumber ) {
+        private void plotQuaterniunValues(double angle, Quaternion quat, double denom, int sensorNumber) {
             // Add values to plot
             if ((bool)wCheckbox.IsChecked) {
-                (model.Series[5*sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], (angleMode) ? angle : quat.W));
+                (model.Series[5 * sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], (angleMode) ? angle : quat.W));
             }
             if ((bool)xyzCheckbox.IsChecked) {
                 (model.Series[5 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], quat.X / denom));
@@ -311,7 +314,7 @@ namespace ATT {
             // Display values numerically
             double[] values = { angleMode ? angle : quat.W, (quat.X / denom), (quat.Y / denom), (quat.Z / denom) };
             String[] labels = { angleMode ? "Angle: " : "W: ", "\nX: ", "\nY: ", "\nY: " };
-            //setText(calculateEulerAngles(quat), sensorNumber + 2);
+            setText(calculateEulerAngles(quat), sensorNumber + 2);
             String s = createOrientationText(labels, values);
             setText(s, sensorNumber);
 
@@ -369,20 +372,19 @@ namespace ATT {
             // roll (x-axis rotation)
             double sinr = +2.0 * (quat.W * quat.X + quat.Y * quat.Z);
             double cosr = +1.0 - 2.0 * (quat.X * quat.X + quat.Y * quat.Y);
-            roll = Math.Atan2(sinr, cosr) * 180 / (Math.PI);
+            eulerAngles.roll = Math.Atan2(sinr, cosr) * 180 / (Math.PI);
 
             // pitch (y-axis rotation)
             double sinp = +2.0 * (quat.W * quat.Y - quat.Z * quat.X);
             if (Math.Abs(sinp) >= 1)
                 pitch = (Math.PI / 2 * sinp / Math.Abs(sinp)); // use 90 degrees if out of range
-            else
-                pitch = Math.Asin(sinp);
-            pitch = pitch * 180 / (Math.PI);
+            pitch = Math.Asin(sinp);
+            eulerAngles.pitch = pitch * 180 / (Math.PI);
             // yaw (z-axis rotation)
             double siny = +2.0 * (quat.W * quat.Z + quat.X * quat.Y);
             double cosy = +1.0 - 2.0 * (quat.Y * quat.Y + quat.Z * quat.Z);
-            yaw = Math.Atan2(siny, cosy) * 180 / (Math.PI);
-            return "x: " + roll.ToString() + "°\ny: " + pitch.ToString() + "°\nz: " + yaw.ToString() + "°";
+            eulerAngles.yaw = Math.Atan2(siny, cosy) * 180 / (Math.PI);
+            return eulerAngles.ToString();
         }
 
         // silly function used to make the live orientation text
@@ -528,5 +530,22 @@ namespace ATT {
         private void print(String s) {
             System.Diagnostics.Debug.WriteLine(s);
         }
+    }
+
+    sealed class EulerAngles {
+
+        public double roll { get; set; }
+        public double pitch { get; set; }
+        public double yaw { get; set; }
+        public EulerAngles() {
+            roll = 0.0;
+            pitch = 0.0;
+            yaw = 0.0;
+        }
+
+        public override string ToString() {
+            return "x: " + roll.ToString() + "°\ny: " + pitch.ToString() + "°\nz: " + yaw.ToString() + "°";
+        }
+
     }
 }
