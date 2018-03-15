@@ -243,6 +243,85 @@ namespace ATT {
 
         //}
 
+        private async void quaternionStreamRoutine(IData data) {
+            if (isRunning) {
+                var quat = data.Value<Quaternion>();
+                var time = data.FormattedTimestamp.ToString();
+
+                var year = time.Substring(0, 4); var month = time.Substring(5, 2); var day = time.Substring(8, 2);
+                var hour = time.Substring(11, 2); var minute = time.Substring(14, 2); var second = time.Substring(17, 2);
+                var milli = time.Substring(20, 3);
+
+                // Store data point
+                if (record) {
+                    String newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}{12}", samples[0], year, month, day, hour, minute, second, milli, quat.W, quat.X, quat.Y, quat.Z, Environment.NewLine);
+                    addPoint(newLine, 0);
+                }
+                // Update counters
+                samples[0]++;
+                freq[0]++;
+
+                // Save reference quaternion
+                if (shouldCenter[0]) {
+                    refQuats[0] = quat;
+                    shouldCenter[0] = false;
+                    centered[0] = true;
+                }
+
+                double angle = 0;
+                double denom = 1;
+
+                if (centered[0]) {
+                    WindowsQuaternion a = convertToWindowsQuaternion(refQuats[0]);
+                    WindowsQuaternion b = convertToWindowsQuaternion(quat);
+
+                    quat = centerData(refQuats[0], quat);
+                    angle = (angleMode) ? 2 * Math.Acos(WindowsQuaternion.Dot(a, b) / (a.Length() * b.Length())) * (180 / Math.PI) : 0;
+                }
+                else if (angleMode) {
+                    angle = 2 * Math.Acos(quat.W) * (180 / Math.PI);
+                    denom = Math.Sqrt(1 - Math.Pow(quat.W, 2));
+                    denom = (denom < 0.001) ? 1 : denom;  // avoid divide by zero type errors
+                }
+                angle = (angle > 180) ? 360 - angle : angle;
+
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotQuaterniunValues(angle, quat, denom) );
+            }
+        }
+
+        private async void plotQuaterniunValues(double angle, Quaternion quat, double denom ) {
+            // Add values to plot
+            if ((bool)wCheckbox.IsChecked) {
+                (model.Series[0] as LineSeries).Points.Add(new DataPoint(samples[0], (angleMode) ? angle : quat.W));
+            }
+            if ((bool)xyzCheckbox.IsChecked) {
+                (model.Series[1] as LineSeries).Points.Add(new DataPoint(samples[0], quat.X / denom));
+                (model.Series[2] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Y / denom));
+                (model.Series[3] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Z / denom));
+            }
+
+            // Display values numerically
+            double[] values = { angleMode ? angle : quat.W, (quat.X / denom), (quat.Y / denom), (quat.Z / denom) };
+            String[] labels = { angleMode ? "Angle: " : "W: ", "\nX: ", "\nY: ", "\nY: " };
+            setText(calculateEulerAngles(quat), 2);
+            String s = createOrientationText(labels, values);
+            setText(s, 0);
+
+            // Reset axes as needed
+            if ((bool)wCheckbox.IsChecked || (bool)xyzCheckbox.IsChecked) {
+                model.InvalidatePlot(true);
+                //if (secs > MainViewModel.MAX_SECONDS)
+                if (samples.Max() > MainViewModel.MAX_DATA_SAMPLES) {
+                    model.Axes[1].Reset();
+                    //model.Axes[1].Maximum = secs;
+                    //model.Axes[1].Minimum = secs - MainViewModel.MAX_SECONDS;
+                    model.Axes[1].Maximum = samples.Max();
+                    model.Axes[1].Minimum = (samples.Max() - MainViewModel.MAX_DATA_SAMPLES);
+                    model.Axes[1].Zoom(model.Axes[1].Minimum, model.Axes[1].Maximum);
+                }
+            }
+        }
+
         private async void streamSwitch_Toggled(object sender, RoutedEventArgs e) {
             if (streamSwitch.IsOn) {
                 myStopWatch.Start();
@@ -260,85 +339,7 @@ namespace ATT {
                 //await sensorFusion.LinearAcceleration.AddRouteAsync(source => source.Stream(async data => updateAccelerometer(data))); //accelerometer tests
 
                 // ----------------------------------------------------- SENSOR 1 --------------------------------------------------------------
-                await sensorFusion.Quaternion.AddRouteAsync(source => source.Stream(async data =>
-                {
-                    if (isRunning) {
-                        var quat = data.Value<Quaternion>();
-                        var time = data.FormattedTimestamp.ToString();
-
-                        var year = time.Substring(0, 4); var month = time.Substring(5, 2); var day = time.Substring(8, 2);
-                        var hour = time.Substring(11, 2); var minute = time.Substring(14, 2); var second = time.Substring(17, 2);
-                        var milli = time.Substring(20, 3);
-
-                        // Store data point
-                        if (record) {
-                            String newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}{12}", samples[0], year, month, day, hour, minute, second, milli, quat.W, quat.X, quat.Y, quat.Z, Environment.NewLine);
-                            addPoint(newLine, 0);
-                        }
-
-                        // Update counters
-                        samples[0]++;
-                        freq[0]++;
-
-                        // Save reference quaternion
-                        if (shouldCenter[0]) {
-                            refQuats[0] = quat;
-                            shouldCenter[0] = false;
-                            centered[0] = true;
-                        }
-
-                        double angle = 0;
-                        double denom = 1;
-
-                        if (centered[0]) {
-                            WindowsQuaternion a = convertToWindowsQuaternion(refQuats[0]);
-                            WindowsQuaternion b = convertToWindowsQuaternion(quat);
-
-                            quat = centerData(refQuats[0], quat);
-                            angle = (angleMode) ? 2 * Math.Acos(WindowsQuaternion.Dot(a, b) / (a.Length() * b.Length())) * (180 / Math.PI) : 0;
-                        }
-                        else if (angleMode) {
-                            angle = 2 * Math.Acos(quat.W) * (180 / Math.PI);
-                            denom = Math.Sqrt(1 - Math.Pow(quat.W, 2));
-                            denom = (denom < 0.001) ? 1 : denom;  // avoid divide by zero type errors
-                        }
-                        angle = (angle > 180) ? 360 - angle : angle;
-
-                        await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-                        {
-                            // Add values to plot
-                            if ((bool)wCheckbox.IsChecked) {
-                                (model.Series[0] as LineSeries).Points.Add(new DataPoint(samples[0], (angleMode) ? angle : quat.W));
-                            }
-                            if ((bool)xyzCheckbox.IsChecked) {
-                                (model.Series[1] as LineSeries).Points.Add(new DataPoint(samples[0], quat.X / denom));
-                                (model.Series[2] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Y / denom));
-                                (model.Series[3] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Z / denom));
-                            }
-
-                            // Display values numerically
-                            double[] values = { angleMode ? angle : quat.W, (quat.X / denom), (quat.Y / denom), (quat.Z / denom) };
-                            String[] labels = { angleMode ? "Angle: " : "W: ", "\nX: ", "\nY: ", "\nY: " };
-                            setText(calculateEulerAngles(quat), 2);
-                            String s = createOrientationText(labels, values);
-                            setText(s, 0);
-
-                            // Reset axes as needed
-                            if ((bool)wCheckbox.IsChecked || (bool)xyzCheckbox.IsChecked) {
-                                model.InvalidatePlot(true);
-                                //if (secs > MainViewModel.MAX_SECONDS)
-                                if (samples.Max() > MainViewModel.MAX_DATA_SAMPLES) {
-                                    model.Axes[1].Reset();
-                                    //model.Axes[1].Maximum = secs;
-                                    //model.Axes[1].Minimum = secs - MainViewModel.MAX_SECONDS;
-                                    model.Axes[1].Maximum = samples.Max();
-                                    model.Axes[1].Minimum = (samples.Max() - MainViewModel.MAX_DATA_SAMPLES);
-                                    model.Axes[1].Zoom(model.Axes[1].Minimum, model.Axes[1].Maximum);
-                                }
-                            }
-                        });
-                    }
-                }));
+                await sensorFusion.Quaternion.AddRouteAsync(source => source.Stream(async data => quaternionStreamRoutine(data)));
 
                 sensorFusion.Quaternion.Start();
                 //sensorFusion.LinearAcceleration.Start();         //accelerometer tests
