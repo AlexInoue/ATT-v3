@@ -100,9 +100,69 @@ namespace ATT {
                 Minimum = 0,
                 Maximum = MAX_DATA_SAMPLES
             });
+
+            //Euler Plot
+            MyModelEuler = new PlotModel {
+                Title = "EulerAngles",
+                IsLegendVisible = true
+            };
+            MyModelEuler.Series.Add(new LineSeries {
+                MarkerStroke = OxyColor.FromRgb(1, 0, 1),
+                LineStyle = LineStyle.Solid,
+                Title = "roll (x1-axis)"
+            });
+            MyModelEuler.Series.Add(new LineSeries {
+                BrokenLineStyle = LineStyle.Solid,
+                MarkerStroke = OxyColor.FromRgb(1, 0, 0),
+                LineStyle = LineStyle.Solid,
+                Title = "pitch (y1-axis)"
+            });
+            MyModelEuler.Series.Add(new LineSeries {
+                BrokenLineStyle = LineStyle.Solid,
+                MarkerStroke = OxyColor.FromRgb(0, 0, 1),
+                LineStyle = LineStyle.Solid,
+                Title = "yaw (z1-axis)"
+            });
+            MyModelEuler.Series.Add(new LineSeries {
+                MarkerStroke = OxyColor.FromRgb(0, 1, 1),
+                LineStyle = LineStyle.Solid,
+                Title = "roll (x2-axis)"
+            });
+            MyModelEuler.Series.Add(new LineSeries {
+                BrokenLineStyle = LineStyle.Solid,
+                MarkerStroke = OxyColor.FromRgb(1, 0, 0),
+                LineStyle = LineStyle.Solid,
+                Title = "pitch (y2-axis)"
+            });
+            MyModelEuler.Series.Add(new LineSeries {
+                BrokenLineStyle = LineStyle.Solid,
+                MarkerStroke = OxyColor.FromRgb(0, 1, 0),
+                LineStyle = LineStyle.Solid,
+                Title = "yaw (z2-axis)"
+            });
+            MyModelEuler.Axes.Add(new LinearAxis {
+                Position = AxisPosition.Left,
+                MajorGridlineStyle = LineStyle.Solid,
+                // AbsoluteMinimum = -1f,
+                // AbsoluteMaximum = 1f,
+                Minimum = -180,
+                Maximum = 180,
+                Title = "Value"
+            });
+            MyModelEuler.Axes.Add(new LinearAxis {
+                IsPanEnabled = true,
+                Position = AxisPosition.Bottom,
+                MajorGridlineStyle = LineStyle.Solid,
+                AbsoluteMinimum = 0,
+                Minimum = 0,
+                Maximum = MAX_DATA_SAMPLES
+            });
         }
 
+        
+
         public PlotModel MyModel { get; private set; }
+        public PlotModel MyModelEuler { get; private set; }
     }
     #endregion
 
@@ -128,6 +188,7 @@ namespace ATT {
         int[] freq = { 0, 0 };  // stores number of samples received, reset every second
         Quaternion[] refQuats = new Quaternion[2]; // reference quaternions
         PlotModel model;
+        PlotModel modelEuler;
         int[] samples = { 0, 0 }; // stores number of samples received 
         int secs = 0;
         StringBuilder[] csv = { new StringBuilder(), new StringBuilder() }; // data storage, more efficient than string concatenation
@@ -172,6 +233,7 @@ namespace ATT {
             }
 
             model = (DataContext as MainViewModel).MyModel;
+            modelEuler = (DataContext as MainViewModel).MyModelEuler;
         }
 
         public void removeBoardTwoFormatting() {
@@ -179,6 +241,9 @@ namespace ATT {
             dataGrid.Children.Remove(DataTextBlock2);
             dataGrid.Children.Remove(Name2);
             dataGrid.ColumnDefinitions.RemoveAt(1);
+
+            eulerDataGrid.Children.Remove(DataTextBlock4);
+            eulerDataGrid.RowDefinitions.RemoveAt(1);
 
             controlGrid.Children.Remove(FrequencyTextBlock2);
             controlGrid.Children.Remove(BatteryTextBlock2);
@@ -290,9 +355,10 @@ namespace ATT {
                 }
                 angle = (angle > 180) ? 360 - angle : angle;
 
-                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotQuaterniunValues(angle, quat, denom, sensorNumber));
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotValues(angle, quat, denom, sensorNumber));
             }
         }
+
         /// <summary>
         ///  Plots the data optained by the sensor.
         /// </summary>
@@ -300,7 +366,19 @@ namespace ATT {
         /// <param name="quat"> Quaternion vector measured</param>
         /// <param name="denom"> Denom value calculated</param>
         /// <param name="sensorNumber"> Number of the sensor used</param>
-        private void plotQuaterniunValues(double angle, Quaternion quat, double denom, int sensorNumber) {
+        private void plotValues(double angle, Quaternion quat, double denom, int sensorNumber) {
+            plotEulerValues(angle, quat, denom, sensorNumber);
+            plotQuaternionValues(angle, quat, denom, sensorNumber);
+        }
+
+        /// <summary>
+        ///  Plots the quaternions.
+        /// </summary>
+        /// <param name="angle"> Quaternion angle, obtained by the W component</param>
+        /// <param name="quat"> Quaternion vector measured</param>
+        /// <param name="denom"> Denom value calculated</param>
+        /// <param name="sensorNumber"> Number of the sensor used</param>
+        private void plotQuaternionValues(double angle, Quaternion quat, double denom, int sensorNumber) {
             // Add values to plot
             if ((bool)wCheckbox.IsChecked) {
                 (model.Series[5 * sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], (angleMode) ? angle : quat.W));
@@ -314,7 +392,6 @@ namespace ATT {
             // Display values numerically
             double[] values = { angleMode ? angle : quat.W, (quat.X / denom), (quat.Y / denom), (quat.Z / denom) };
             String[] labels = { angleMode ? "Angle: " : "W: ", "\nX: ", "\nY: ", "\nY: " };
-            setText(calculateEulerAngles(quat), sensorNumber + 2);
             String s = createOrientationText(labels, values);
             setText(s, sensorNumber);
 
@@ -333,7 +410,36 @@ namespace ATT {
             }
         }
 
-        private async void streamSwitch_Toggled(object sender, RoutedEventArgs e) {
+        /// <summary>
+        ///  Plots the Euler angles values.
+        /// </summary>
+        /// <param name="angle"> Quaternion angle, obtained by the W component</param>
+        /// <param name="quat"> Quaternion vector measured</param>
+        /// <param name="denom"> Denom value calculated</param>
+        /// <param name="sensorNumber"> Number of the sensor used</param>
+        private void plotEulerValues(double angle, Quaternion quat, double denom, int sensorNumber) {
+            setText(calculateEulerAngles(quat), sensorNumber + 2);
+
+            if ((bool)eulerCheckbox.IsChecked) {
+                (modelEuler.Series[3 * sensorNumber ] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], eulerAngles.roll));
+                (modelEuler.Series[3 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], eulerAngles.pitch));
+                (modelEuler.Series[3 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], eulerAngles.yaw));
+            }
+            if ((bool)eulerCheckbox.IsChecked) {
+                modelEuler.InvalidatePlot(true);
+                //if (secs > MainViewModel.MAX_SECONDS)
+                if (samples.Max() > MainViewModel.MAX_DATA_SAMPLES) {
+                    modelEuler.Axes[1].Reset();
+                    //model.Axes[1].Maximum = secs;
+                    //model.Axes[1].Minimum = secs - MainViewModel.MAX_SECONDS;
+                    modelEuler.Axes[1].Maximum = samples.Max();
+                    modelEuler.Axes[1].Minimum = (samples.Max() - MainViewModel.MAX_DATA_SAMPLES);
+                    modelEuler.Axes[1].Zoom(modelEuler.Axes[1].Minimum, modelEuler.Axes[1].Maximum);
+                }
+            }
+        }
+
+            private async void streamSwitch_Toggled(object sender, RoutedEventArgs e) {
             if (streamSwitch.IsOn) {
                 isRunning = true;
                 Clear_Click(null, null);
@@ -415,6 +521,15 @@ namespace ATT {
 
         public async void xyzChecked(Object sender, RoutedEventArgs e) {
             resetYAxis();
+        }
+
+        public async void eulerChecked(Object sender, RoutedEventArgs e) {
+            //resets euler graph y axis
+            modelEuler.InvalidatePlot(true);
+            modelEuler.Axes[0].Reset();
+            modelEuler.Axes[0].Maximum = 180;    
+            modelEuler.Axes[0].Minimum = -180;
+            modelEuler.Axes[0].Zoom(modelEuler.Axes[0].Minimum, modelEuler.Axes[0].Maximum);
         }
 
         // Change axes to adjust for new maximum values.
