@@ -178,7 +178,6 @@ namespace ATT {
         int numBoards = 1;
         //private IntPtr cppBoard;
         private IMetaWearBoard[] metawears; // board storage
-        private EulerAngles eulerAngles = new EulerAngles();
         bool startNext = true;
         bool isRunning = false; // avoids weird timing errors with switching streaming on and off
         bool[] centered = { false, false }; // sensor has ben centered
@@ -187,11 +186,13 @@ namespace ATT {
         bool angleMode = false; // ^ same
         int[] freq = { 0, 0 };  // stores number of samples received, reset every second
         Quaternion[] refQuats = new Quaternion[2]; // reference quaternions
+        EulerAngles RefEuler = new EulerAngles();
         PlotModel model;
         PlotModel modelEuler;
         int[] samples = { 0, 0 }; // stores number of samples received 
         int secs = 0;
         StringBuilder[] csv = { new StringBuilder(), new StringBuilder() }; // data storage, more efficient than string concatenation
+        StringBuilder[] csvEuler = { new StringBuilder(), new StringBuilder() }; // data storage, more efficient than string concatenation
         TextBlock[] textblocks = new TextBlock[4];
         private System.Threading.Timer timer1; // used for triggering UI updates every second
 
@@ -316,6 +317,7 @@ namespace ATT {
         private async Task quaternionStreamRoutine(IData data, int sensorNumber) {
             if (isRunning) {
                 var quat = data.Value<Quaternion>();
+                var eulerAngles = calculateEulerAngles(quat);                                
                 var time = data.FormattedTimestamp.ToString();
 
                 var year = time.Substring(0, 4); var month = time.Substring(5, 2); var day = time.Substring(8, 2);
@@ -326,6 +328,8 @@ namespace ATT {
                 if (record) {
                     String newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}{12}", samples[sensorNumber], year, month, day, hour, minute, second, milli, quat.W, quat.X, quat.Y, quat.Z, Environment.NewLine);
                     addPoint(newLine, sensorNumber);
+                    newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}", samples[sensorNumber], year, month, day, hour, minute, second, milli, eulerAngles.roll, eulerAngles.pitch, eulerAngles.yaw, Environment.NewLine);
+                    addPointEuler(newLine, sensorNumber);
                 }
                 // Update counters
                 samples[sensorNumber]++;
@@ -355,7 +359,7 @@ namespace ATT {
                 }
                 angle = (angle > 180) ? 360 - angle : angle;
 
-                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotValues(angle, quat, denom, sensorNumber));
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotValues(angle, quat, eulerAngles, denom, sensorNumber));
             }
         }
 
@@ -366,8 +370,8 @@ namespace ATT {
         /// <param name="quat"> Quaternion vector measured</param>
         /// <param name="denom"> Denom value calculated</param>
         /// <param name="sensorNumber"> Number of the sensor used</param>
-        private void plotValues(double angle, Quaternion quat, double denom, int sensorNumber) {
-            plotEulerValues(angle, quat, denom, sensorNumber);
+        private void plotValues(double angle, Quaternion quat, EulerAngles eulAng, double denom, int sensorNumber) {
+            plotEulerValues(angle, eulAng, denom, sensorNumber);
             plotQuaternionValues(angle, quat, denom, sensorNumber);
         }
 
@@ -395,18 +399,8 @@ namespace ATT {
             String s = createOrientationText(labels, values);
             setText(s, sensorNumber);
 
-            // Reset axes as needed
             if ((bool)wCheckbox.IsChecked || (bool)xyzCheckbox.IsChecked) {
-                model.InvalidatePlot(true);
-                //if (secs > MainViewModel.MAX_SECONDS)
-                if (samples.Max() > MainViewModel.MAX_DATA_SAMPLES) {
-                    model.Axes[1].Reset();
-                    //model.Axes[1].Maximum = secs;
-                    //model.Axes[1].Minimum = secs - MainViewModel.MAX_SECONDS;
-                    model.Axes[1].Maximum = samples.Max();
-                    model.Axes[1].Minimum = (samples.Max() - MainViewModel.MAX_DATA_SAMPLES);
-                    model.Axes[1].Zoom(model.Axes[1].Minimum, model.Axes[1].Maximum);
-                }
+                resetModel(model);
             }
         }
 
@@ -414,11 +408,11 @@ namespace ATT {
         ///  Plots the Euler angles values.
         /// </summary>
         /// <param name="angle"> Quaternion angle, obtained by the W component</param>
-        /// <param name="quat"> Quaternion vector measured</param>
+        /// <param name="eulerAngles"> Measured EulerAngles </param>
         /// <param name="denom"> Denom value calculated</param>
         /// <param name="sensorNumber"> Number of the sensor used</param>
-        private void plotEulerValues(double angle, Quaternion quat, double denom, int sensorNumber) {
-            setText(calculateEulerAngles(quat), sensorNumber + 2);
+        private void plotEulerValues(double angle, EulerAngles eulerAngles, double denom, int sensorNumber) {
+            setText(eulerAngles.ToString(), sensorNumber + 2);
 
             if ((bool)eulerCheckbox.IsChecked) {
                 (modelEuler.Series[3 * sensorNumber ] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], eulerAngles.roll));
@@ -426,20 +420,25 @@ namespace ATT {
                 (modelEuler.Series[3 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], eulerAngles.yaw));
             }
             if ((bool)eulerCheckbox.IsChecked) {
-                modelEuler.InvalidatePlot(true);
-                //if (secs > MainViewModel.MAX_SECONDS)
-                if (samples.Max() > MainViewModel.MAX_DATA_SAMPLES) {
-                    modelEuler.Axes[1].Reset();
-                    //model.Axes[1].Maximum = secs;
-                    //model.Axes[1].Minimum = secs - MainViewModel.MAX_SECONDS;
-                    modelEuler.Axes[1].Maximum = samples.Max();
-                    modelEuler.Axes[1].Minimum = (samples.Max() - MainViewModel.MAX_DATA_SAMPLES);
-                    modelEuler.Axes[1].Zoom(modelEuler.Axes[1].Minimum, modelEuler.Axes[1].Maximum);
-                }
+                resetModel(modelEuler);
             }
         }
 
-            private async void streamSwitch_Toggled(object sender, RoutedEventArgs e) {
+        // Reset axes as needed
+        private void resetModel(PlotModel model) {
+            model.InvalidatePlot(true);
+            //if (secs > MainViewModel.MAX_SECONDS)
+            if (samples.Max() > MainViewModel.MAX_DATA_SAMPLES) {
+                model.Axes[1].Reset();
+                //model.Axes[1].Maximum = secs;
+                //model.Axes[1].Minimum = secs - MainViewModel.MAX_SECONDS;
+                model.Axes[1].Maximum = samples.Max();
+                model.Axes[1].Minimum = (samples.Max() - MainViewModel.MAX_DATA_SAMPLES);
+                model.Axes[1].Zoom(model.Axes[1].Minimum, model.Axes[1].Maximum);
+            }
+        }
+
+        private async void streamSwitch_Toggled(object sender, RoutedEventArgs e) {
             if (streamSwitch.IsOn) {
                 isRunning = true;
                 Clear_Click(null, null);
@@ -473,24 +472,25 @@ namespace ATT {
         }
 
         //Function that calculate axes rotations by using quaternions
-        private String calculateEulerAngles(Quaternion quat) {
+        private EulerAngles calculateEulerAngles(Quaternion quat) {
+            EulerAngles ret = new EulerAngles();
             double roll, pitch, yaw;
             // roll (x-axis rotation)
             double sinr = +2.0 * (quat.W * quat.X + quat.Y * quat.Z);
             double cosr = +1.0 - 2.0 * (quat.X * quat.X + quat.Y * quat.Y);
-            eulerAngles.roll = Math.Atan2(sinr, cosr) * 180 / (Math.PI);
+            ret.roll = Math.Atan2(sinr, cosr) * 180 / (Math.PI);
 
             // pitch (y-axis rotation)
             double sinp = +2.0 * (quat.W * quat.Y - quat.Z * quat.X);
             if (Math.Abs(sinp) >= 1)
                 pitch = (Math.PI / 2 * sinp / Math.Abs(sinp)); // use 90 degrees if out of range
             pitch = Math.Asin(sinp);
-            eulerAngles.pitch = pitch * 180 / (Math.PI);
+            ret.pitch = pitch * 180 / (Math.PI);
             // yaw (z-axis rotation)
             double siny = +2.0 * (quat.W * quat.Z + quat.X * quat.Y);
             double cosy = +1.0 - 2.0 * (quat.Y * quat.Y + quat.Z * quat.Z);
-            eulerAngles.yaw = Math.Atan2(siny, cosy) * 180 / (Math.PI);
-            return eulerAngles.ToString();
+            ret.yaw = Math.Atan2(siny, cosy) * 180 / (Math.PI);
+            return ret;
         }
 
         // silly function used to make the live orientation text
@@ -573,6 +573,43 @@ namespace ATT {
             saveData();
         }
 
+        private void Save_ClickEuler(object sender, RoutedEventArgs e) {
+            saveEulerData();
+        }
+
+        //Save all recorded Euler Data
+        private async Task saveEulerData(int sensorNumber = 1) {
+            print("save of Euler angles data initiated for sensor: ");
+            print(sensorNumber.ToString());
+
+            var savePicker = new Windows.Storage.Pickers.FileSavePicker();
+            savePicker.FileTypeChoices.Add("PLain Text", new List<string>() { ".txt" });
+            savePicker.SuggestedFileName = dateTextBox.Text + "_expEul" + numberTextBox.Text + "_" + ((sensorNumber == 1) ? Name1.Text : Name2.Text);
+            Windows.Storage.StorageFile file = await savePicker.PickSaveFileAsync();
+            if (file != null) {
+                Windows.Storage.CachedFileManager.DeferUpdates(file);
+                //write to file
+                await Windows.Storage.FileIO.WriteTextAsync(file, csvEuler[sensorNumber - 1].ToString());
+                Windows.Storage.Provider.FileUpdateStatus status =
+                    await Windows.Storage.CachedFileManager.CompleteUpdatesAsync(file);
+                if (status == Windows.Storage.Provider.FileUpdateStatus.Complete) {
+                    if (sensorNumber == numBoards) {
+                        numberTextBox.Text = (Int32.Parse(numberTextBox.Text) + 1).ToString();
+                    }
+                    else {
+                        saveEulerData(sensorNumber + 1);
+                    }
+                }
+                else {
+                    //this.textBlock.Text = "File " + file.Name + " couldn't be saved.";
+                }
+            }
+            else {
+                //this.textBlock.Text = "Operation cancelled.";
+            }
+        }
+
+
         // Save all recorded data.
         private async Task saveData(int sensorNumber = 1) {
             print("save initiated for sensor: ");
@@ -609,6 +646,7 @@ namespace ATT {
             for (int i = 0; i < numBoards; i++) {
                 centered[i] = false;
                 csv[i] = new StringBuilder();
+                csvEuler[i] = new StringBuilder();
             }
 
             await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => {
@@ -639,6 +677,12 @@ namespace ATT {
         void addPoint(String s, int sensorNumber) {
             if (isRunning) {
                 csv[sensorNumber].Append(s);
+            }
+        }
+
+        void addPointEuler(String s, int sensorNumber) {
+            if (isRunning) {
+                csvEuler[sensorNumber].Append(s);
             }
         }
 

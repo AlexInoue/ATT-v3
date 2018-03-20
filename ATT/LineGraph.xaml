@@ -143,7 +143,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.ColumnSpan="2" Grid.Column="0" Grid.Row="0" Text="Angle Data Sensor 1" x:Name="DataTextBlock3" Foreground="Red" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
                 <TextBlock Grid.ColumnSpan="2" Grid.Column="0" Grid.Row="1" Text="Angle Data Sensor 2" x:Name="DataTextBlock4" Foreground="Red" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
-                <Button x:Name="SaveEuler"  Grid.Row="2" Grid.Column="0" Content="Save" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Save_Click" Height="50" Background="Green" Width="150"/>
+                <Button x:Name="SaveEuler"  Grid.Row="2" Grid.Column="0" Content="Save" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Save_ClickEuler" Height="50" Background="Green" Width="150"/>
                 <Button x:Name="ClearEuler" Grid.Row="2" Grid.Column="1" Content="Clear" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Clear_Click" Height="50" Background="Gray" Width="150"/>
             </Grid>
             <Grid Grid.Row="1" HorizontalAlignment="Stretch" Height="550" VerticalAlignment="Stretch"  Grid.Column="1" Margin="0,100,0,100">
