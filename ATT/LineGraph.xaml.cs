@@ -186,7 +186,7 @@ namespace ATT {
         bool angleMode = false; // ^ same
         int[] freq = { 0, 0 };  // stores number of samples received, reset every second
         Quaternion[] refQuats = new Quaternion[2]; // reference quaternions
-        EulerAngles RefEuler = new EulerAngles();
+        EulerAngles[] refEuler = new EulerAngles[2];
         PlotModel model;
         PlotModel modelEuler;
         int[] samples = { 0, 0 }; // stores number of samples received 
@@ -337,6 +337,7 @@ namespace ATT {
 
                 // Save reference quaternion
                 if (shouldCenter[sensorNumber]) {
+                    refEuler[sensorNumber] = eulerAngles;
                     refQuats[sensorNumber] = quat;
                     shouldCenter[sensorNumber] = false;
                     centered[sensorNumber] = true;
@@ -350,6 +351,7 @@ namespace ATT {
                     WindowsQuaternion b = convertToWindowsQuaternion(quat);
 
                     quat = centerData(refQuats[sensorNumber], quat);
+                    eulerAngles = centerData(refEuler[sensorNumber], eulerAngles);
                     angle = (angleMode) ? 2 * Math.Acos(WindowsQuaternion.Dot(a, b) / (a.Length() * b.Length())) * (180 / Math.PI) : 0;
                 }
                 else if (angleMode) {
@@ -424,7 +426,6 @@ namespace ATT {
             }
         }
 
-        // Reset axes as needed
         private void resetModel(PlotModel model) {
             model.InvalidatePlot(true);
             //if (secs > MainViewModel.MAX_SECONDS)
@@ -556,6 +557,29 @@ namespace ATT {
             return convertToQuaternion(center);
         }
 
+        EulerAngles centerData(EulerAngles eRef, EulerAngles e) {
+            EulerAngles ret = new EulerAngles();
+            ret.roll = fitIn360(e.roll - eRef.roll);
+            ret.pitch = finIn180(e.pitch - eRef.pitch);
+            ret.yaw = fitIn360(e.yaw - eRef.yaw);
+            return ret;
+        }
+
+        private double fitIn360(double result) {
+            if (result < -180)
+                return 360 + result;
+            else if (result > 180)
+                return 360 - result;
+            return result;
+        }
+        private double finIn180(double result) {
+            if (result < -90)
+                return 180 + result;
+            else if (result > 90)
+                return 180 - result;
+            return result;
+        }
+
         // Converts mbientlab quaternion object to Windows quaternion object.
         WindowsQuaternion convertToWindowsQuaternion(Quaternion q) {
             WindowsQuaternion qw = new WindowsQuaternion(q.W, q.X, q.Y, q.Z);
@@ -655,6 +679,10 @@ namespace ATT {
                     var lseries = series as LineSeries;
                     lseries.Points.Clear();
                 }
+                foreach (var series in modelEuler.Series) {
+                    var lseries = series as LineSeries;
+                    lseries.Points.Clear();
+                }
 
                 // Reset plot
                 model.Axes[1].Reset();
@@ -662,10 +690,19 @@ namespace ATT {
                 model.Axes[1].Minimum = MainViewModel.MAX_DATA_SAMPLES;
                 model.Axes[1].Zoom(model.Axes[1].Minimum, model.Axes[1].Maximum);
                 model.InvalidatePlot(true);
+
+                // Reset plot
+                modelEuler.Axes[1].Reset();
+                modelEuler.Axes[1].Maximum = 0;
+                modelEuler.Axes[1].Minimum = MainViewModel.MAX_DATA_SAMPLES;
+                modelEuler.Axes[1].Zoom(model.Axes[1].Minimum, model.Axes[1].Maximum);
+                modelEuler.InvalidatePlot(true);
+
             });
 
             if (!isRunning) {
                 Clear.Background = new SolidColorBrush(Windows.UI.Colors.Gray);
+                ClearEuler.Background = new SolidColorBrush(Windows.UI.Colors.Gray);
             }
         }
 
