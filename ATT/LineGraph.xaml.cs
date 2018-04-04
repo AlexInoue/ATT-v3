@@ -27,6 +27,10 @@ using Windows.UI.Xaml.Media;
 using MbientLab.MetaWear.Core.Settings;
 using System.Threading.Tasks;
 using System.Text;
+using MbientLab.MetaWear.Peripheral;
+using MbientLab.MetaWear.Peripheral.Gpio;
+
+
 
 // O modelo de item de Página em Branco está documentado em https://go.microsoft.com/fwlink/?LinkId=234238
 
@@ -206,6 +210,7 @@ namespace ATT {
         protected async override void OnNavigatedTo(NavigationEventArgs e) {
             base.OnNavigatedTo(e);
             var devices = e.Parameter as BluetoothLEDevice[];
+
             numBoards = devices.Length;
             metawears = new IMetaWearBoard[numBoards];
             dateTextBox.Text = DateTime.Now.ToString("yyMMdd");
@@ -220,6 +225,20 @@ namespace ATT {
 
                 Macs[i].Text = metawears[i].MacAddress.ToString(); // update UI to show mac addresses of sensors
             }
+
+            IGpio gpio = metawears[0].GetModule<IGpio>();
+            // output 0V on pin 1
+            gpio.Pins[1].ClearOutput();
+            gpio.Pins[1].SetPullMode(PullMode.Up);
+
+            // Get producer for analog adc data on pin 0
+            IAnalogDataProducer adc = gpio.Pins[1].Adc;
+
+            await adc.AddRouteAsync(source =>
+                source.Stream(data => Console.WriteLine("adc = " + data.Value<ushort>()))
+            );
+
+            adc.Read();
 
             //TODO: make this not hardcoded
             textblocks[0] = DataTextBlock1;
@@ -360,6 +379,7 @@ namespace ATT {
                     denom = (denom < 0.001) ? 1 : denom;  // avoid divide by zero type errors
                 }
                 angle = (angle > 180) ? 360 - angle : angle;
+                // angle = Math.Sqrt(Math.Pow(angle, 2) - Math.Pow(eulerAngles.yaw, 2)); DID NOT WORK
 
                 await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotValues(angle, quat, eulerAngles, denom, sensorNumber));
             }
