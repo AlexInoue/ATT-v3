@@ -200,6 +200,8 @@ namespace ATT {
         TextBlock[] textblocks = new TextBlock[4];
         private System.Threading.Timer timer1; // used for triggering UI updates every second
 
+        IGpio gpio;
+
         #endregion
 
 
@@ -225,20 +227,6 @@ namespace ATT {
 
                 Macs[i].Text = metawears[i].MacAddress.ToString(); // update UI to show mac addresses of sensors
             }
-
-            IGpio gpio = metawears[0].GetModule<IGpio>();
-            // output 0V on pin 1
-            gpio.Pins[1].ClearOutput();
-            gpio.Pins[1].SetPullMode(PullMode.Up);
-
-            // Get producer for analog adc data on pin 0
-            IAnalogDataProducer adc = gpio.Pins[1].Adc;
-
-            await adc.AddRouteAsync(source =>
-                source.Stream(data => Console.WriteLine("adc = " + data.Value<ushort>()))
-            );
-
-            adc.Read();
 
             //TODO: make this not hardcoded
             textblocks[0] = DataTextBlock1;
@@ -379,7 +367,6 @@ namespace ATT {
                     denom = (denom < 0.001) ? 1 : denom;  // avoid divide by zero type errors
                 }
                 angle = (angle > 180) ? 360 - angle : angle;
-                // angle = Math.Sqrt(Math.Pow(angle, 2) - Math.Pow(eulerAngles.yaw, 2)); DID NOT WORK
 
                 await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotValues(angle, quat, eulerAngles, denom, sensorNumber));
             }
@@ -405,6 +392,7 @@ namespace ATT {
         /// <param name="denom"> Denom value calculated</param>
         /// <param name="sensorNumber"> Number of the sensor used</param>
         private void plotQuaternionValues(double angle, Quaternion quat, double denom, int sensorNumber) {
+            gpio.Pins[0].Adc.Read();
             // Add values to plot
             if ((bool)wCheckbox.IsChecked) {
                 (model.Series[5 * sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], (angleMode) ? angle : quat.W));
@@ -466,6 +454,19 @@ namespace ATT {
                 samples[0] = 0;
                 samples[1] = 0;
 
+                //test with GPIO
+                gpio = metawears[0].GetModule<IGpio>();
+                // output 0V on pin 0
+                gpio.Pins[0].ClearOutput();
+                gpio.Pins[0].SetPullMode(PullMode.Up); // -> sets it to high (~1023). Once pressed, it will go to a lower value
+
+                // Get producer for analog adc data on pin 0
+                IAnalogDataProducer adc = gpio.Pins[0].Adc;
+
+                await adc.AddRouteAsync(source =>
+                    source.Stream((data => print("adc = " + data.Value<ushort>()))
+                ));
+
                 sensorFusions = new ISensorFusionBosch[numBoards];
                 for (var j = 0; j < numBoards; j++) {
                     var i = j;
@@ -474,6 +475,7 @@ namespace ATT {
                     await sensorFusions[i].Quaternion.AddRouteAsync(source => source.Stream(async data => await quaternionStreamRoutine(data, i)));
                     sensorFusions[i].Quaternion.Start();
                     sensorFusions[i].Start();
+                    
                 }
                 print("Sensor fusion should be running!");
                 InitFreqTimer();
