@@ -200,7 +200,7 @@ namespace ATT {
         TextBlock[] textblocks = new TextBlock[4];
         private System.Threading.Timer timer1; // used for triggering UI updates every second
 
-        IGpio gpio;
+        IGpio[] gpio;
 
         #endregion
 
@@ -281,11 +281,10 @@ namespace ATT {
 
         // Display the sample frequency for each sensor in Hz.
         private async void displaySampleFreq(Object state) {
-            secs += 1;
             await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => {
                 FrequencyTextBlock1.Text = freq[0] + " Hz";
                 FrequencyTextBlock2.Text = freq[1] + " Hz";
-                AverageFrequencyTextBlock.Text = (samples[0] / secs).ToString() + " Hz";
+                //AverageFrequencyTextBlock.Text = (samples[0] / secs).ToString() + " Hz";
             });
 
             freq[0] = 0;
@@ -333,9 +332,9 @@ namespace ATT {
 
                 // Store data point
                 if (record) {
-                    String newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}{12}", samples[sensorNumber], year, month, day, hour, minute, second, milli, quat.W, quat.X, quat.Y, quat.Z, Environment.NewLine);
+                    String newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}{12}", samples[0], year, month, day, hour, minute, second, milli, quat.W, quat.X, quat.Y, quat.Z, Environment.NewLine);
                     addPoint(newLine, sensorNumber);
-                    newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}", samples[sensorNumber], year, month, day, hour, minute, second, milli, eulerAngles.roll, eulerAngles.pitch, eulerAngles.yaw, Environment.NewLine);
+                    newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}", samples[0], year, month, day, hour, minute, second, milli, eulerAngles.roll, eulerAngles.pitch, eulerAngles.yaw, Environment.NewLine);
                     addPointEuler(newLine, sensorNumber);
                 }
                 // Update counters
@@ -368,7 +367,10 @@ namespace ATT {
                 }
                 angle = (angle > 180) ? 360 - angle : angle;
 
-                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => plotValues(angle, quat, eulerAngles, denom, sensorNumber));
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                {
+                    plotValues(angle, quat, eulerAngles, denom, sensorNumber);
+                });
             }
         }
 
@@ -392,15 +394,14 @@ namespace ATT {
         /// <param name="denom"> Denom value calculated</param>
         /// <param name="sensorNumber"> Number of the sensor used</param>
         private void plotQuaternionValues(double angle, Quaternion quat, double denom, int sensorNumber) {
-            gpio.Pins[0].Adc.Read();
             // Add values to plot
             if ((bool)wCheckbox.IsChecked) {
-                (model.Series[5 * sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], (angleMode) ? angle : quat.W));
+                (model.Series[5 * sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[0], (angleMode) ? angle : quat.W));
             }
             if ((bool)xyzCheckbox.IsChecked) {
-                (model.Series[5 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], quat.X / denom));
-                (model.Series[5 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], quat.Y / denom));
-                (model.Series[5 * sensorNumber + 3] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], quat.Z / denom));
+                (model.Series[5 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[0], quat.X / denom));
+                (model.Series[5 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Y / denom));
+                (model.Series[5 * sensorNumber + 3] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Z / denom));
             }
 
             // Display values numerically
@@ -422,12 +423,15 @@ namespace ATT {
         /// <param name="denom"> Denom value calculated</param>
         /// <param name="sensorNumber"> Number of the sensor used</param>
         private void plotEulerValues(double angle, EulerAngles eulerAngles, double denom, int sensorNumber) {
+            double[] values = { eulerAngles.roll, eulerAngles.pitch, eulerAngles.yaw };
+            String[] labels = { "X: ", "\nY: ", "\nZ: " };
+            String s = createOrientationText(labels, values);
             setText(eulerAngles.ToString(), sensorNumber + 2);
 
             if ((bool)eulerCheckbox.IsChecked) {
-                (modelEuler.Series[3 * sensorNumber ] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], eulerAngles.roll));
-                (modelEuler.Series[3 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], eulerAngles.pitch));
-                (modelEuler.Series[3 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[sensorNumber], eulerAngles.yaw));
+                (modelEuler.Series[3 * sensorNumber ] as LineSeries).Points.Add(new DataPoint(samples[0], eulerAngles.roll));
+                (modelEuler.Series[3 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[0], eulerAngles.pitch));
+                (modelEuler.Series[3 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[0], eulerAngles.yaw));
             }
             if ((bool)eulerCheckbox.IsChecked) {
                 resetModel(modelEuler);
@@ -454,20 +458,8 @@ namespace ATT {
                 samples[0] = 0;
                 samples[1] = 0;
 
-                //test with GPIO
-                gpio = metawears[0].GetModule<IGpio>();
-                // output 0V on pin 0
-                gpio.Pins[0].ClearOutput();
-                gpio.Pins[0].SetPullMode(PullMode.Up); // -> sets it to high (~1023). Once pressed, it will go to a lower value
-
-                // Get producer for analog adc data on pin 0
-                IAnalogDataProducer adc = gpio.Pins[0].Adc;
-
-                await adc.AddRouteAsync(source =>
-                    source.Stream((data => print("adc = " + data.Value<ushort>()))
-                ));
-
                 sensorFusions = new ISensorFusionBosch[numBoards];
+                gpio = new IGpio[numBoards];
                 for (var j = 0; j < numBoards; j++) {
                     var i = j;
                     sensorFusions[i] = metawears[i].GetModule<ISensorFusionBosch>();
@@ -475,7 +467,26 @@ namespace ATT {
                     await sensorFusions[i].Quaternion.AddRouteAsync(source => source.Stream(async data => await quaternionStreamRoutine(data, i)));
                     sensorFusions[i].Quaternion.Start();
                     sensorFusions[i].Start();
-                    
+
+                //    //test with GPIO
+                //    gpio[i] = metawears[i].GetModule<IGpio>();
+                //    // output 0V on pin 0
+                //    gpio[i].Pins[0].ClearOutput();
+                //    gpio[i].Pins[0].SetPullMode(PullMode.Up); // -> sets it to high (~1023). Once pressed, it will go to a lower value
+
+                //    // Get producer for analog adc data on pin 0
+                //    IAnalogDataProducer adc = gpio[i].Pins[0].Adc;
+
+                //    await adc.AddRouteAsync(source =>
+                //        source.Stream((data =>
+                //        {
+                //        print("adc = " + data.Value<ushort>());
+                //            //for (var k = 0; k < numBoards; k++) {
+                //            //}
+                //}
+                //        )
+                //    ));
+
                 }
                 print("Sensor fusion should be running!");
                 InitFreqTimer();
@@ -487,7 +498,6 @@ namespace ATT {
                     sensorFusions[i].Stop();
                     sensorFusions[i].Quaternion.Stop();
                     metawears[i].TearDown();
-
                     freq[i] = 0;
                 }
                 timer1.Dispose();
@@ -525,6 +535,16 @@ namespace ATT {
             }
             return s.ToString();
         }
+        // silly function used to make the live orientation text
+        public String createEulerText(String[] labels, double[] values) {
+            StringBuilder s = new StringBuilder();
+            for (int i = 0; i < values.Length; i++) {
+                s.Append(labels[i]);
+                s.Append(values[i]);
+            }
+            return s.ToString();
+        }
+
 
         // Reset y axis and store angleSwitch state.
         public async void angleSwitch_Toggled(Object sender, RoutedEventArgs e) {
