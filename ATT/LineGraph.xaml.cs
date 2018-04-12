@@ -78,12 +78,12 @@ namespace ATT {
                 Title = "X2"
             });
             MyModel.Series.Add(new LineSeries {
-                MarkerStroke = OxyColor.FromRgb(1, 0, 0),
+                MarkerStroke = OxyColor.FromRgb(0, 0, 0),
                 LineStyle = LineStyle.Solid,
                 Title = "Y2"
             });
             MyModel.Series.Add(new LineSeries {
-                MarkerStroke = OxyColor.FromRgb(0, 1, 0),
+                MarkerStroke = OxyColor.FromRgb(1, 1, 1),
                 LineStyle = LineStyle.Solid,
                 Title = "Z2"
             });
@@ -289,6 +289,8 @@ namespace ATT {
 
             freq[0] = 0;
             freq[1] = 0;
+            gpio[0].Pins[0].Adc.Read(); //just did the reading for one board
+
         }
 
         // Go back to the main page (sensor selection)
@@ -396,12 +398,12 @@ namespace ATT {
         private void plotQuaternionValues(double angle, Quaternion quat, double denom, int sensorNumber) {
             // Add values to plot
             if ((bool)wCheckbox.IsChecked) {
-                (model.Series[5 * sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[0], (angleMode) ? angle : quat.W));
+                (model.Series[4 * sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[0], (angleMode) ? angle : quat.W));
             }
             if ((bool)xyzCheckbox.IsChecked) {
-                (model.Series[5 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[0], quat.X / denom));
-                (model.Series[5 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Y / denom));
-                (model.Series[5 * sensorNumber + 3] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Z / denom));
+                (model.Series[5 * sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[0], quat.X / denom));
+                (model.Series[5 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Y / denom));
+                (model.Series[5 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Z / denom));
             }
 
             // Display values numerically
@@ -462,31 +464,27 @@ namespace ATT {
                 gpio = new IGpio[numBoards];
                 for (var j = 0; j < numBoards; j++) {
                     var i = j;
+                    //test with GPIO
+                    gpio[i] = metawears[i].GetModule<IGpio>();
+                    // output 0V on pin 0
+                    gpio[i].Pins[0].ClearOutput();
+                    gpio[i].Pins[0].SetPullMode(PullMode.Up); // -> sets it to high (~1023). Once pressed, it will go to a lower value
+
+                    // Get producer for analog adc data on pin 0
+                    IAnalogDataProducer adc = gpio[i].Pins[0].Adc;
+
+                    await adc.AddRouteAsync(source =>
+                        source.Stream((data =>
+                        {
+                            print("adc = " + data.Value<ushort>());
+                        }
+                        )
+                    ));
                     sensorFusions[i] = metawears[i].GetModule<ISensorFusionBosch>();
                     sensorFusions[i].Configure(); // default settings is NDoF mode with +/-16g acc range and 2000dps gyro range
                     await sensorFusions[i].Quaternion.AddRouteAsync(source => source.Stream(async data => await quaternionStreamRoutine(data, i)));
                     sensorFusions[i].Quaternion.Start();
                     sensorFusions[i].Start();
-
-                //    //test with GPIO
-                //    gpio[i] = metawears[i].GetModule<IGpio>();
-                //    // output 0V on pin 0
-                //    gpio[i].Pins[0].ClearOutput();
-                //    gpio[i].Pins[0].SetPullMode(PullMode.Up); // -> sets it to high (~1023). Once pressed, it will go to a lower value
-
-                //    // Get producer for analog adc data on pin 0
-                //    IAnalogDataProducer adc = gpio[i].Pins[0].Adc;
-
-                //    await adc.AddRouteAsync(source =>
-                //        source.Stream((data =>
-                //        {
-                //        print("adc = " + data.Value<ushort>());
-                //            //for (var k = 0; k < numBoards; k++) {
-                //            //}
-                //}
-                //        )
-                //    ));
-
                 }
                 print("Sensor fusion should be running!");
                 InitFreqTimer();
