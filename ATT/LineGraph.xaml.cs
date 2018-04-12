@@ -408,7 +408,7 @@ namespace ATT {
 
             // Display values numerically
             double[] values = { angleMode ? angle : quat.W, (quat.X / denom), (quat.Y / denom), (quat.Z / denom) };
-            String[] labels = { angleMode ? "Angle: " : "W: ", "\nX: ", "\nY: ", "\nY: " };
+            String[] labels = { angleMode ? "Angle: " : "W: ", "\nX: ", "\nY: ", "\nZ: " };
             String s = createOrientationText(labels, values);
             setText(s, sensorNumber);
 
@@ -477,6 +477,9 @@ namespace ATT {
                         source.Stream((data =>
                         {
                             print("adc = " + data.Value<ushort>());
+                            //will center everytime small force is applied.
+                            if (data.Value<ushort>() < 1000)
+                                Center_Click(null, null);
                         }
                         )
                     ));
