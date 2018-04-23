@@ -49,9 +49,8 @@ namespace ATT {
                 MarkerStroke = OxyColor.FromRgb(1, 0, 1),
                 LineStyle = LineStyle.Solid,
                 Title = "W1"
-            });
+        });
             MyModel.Series.Add(new LineSeries {
-                BrokenLineStyle = LineStyle.Solid,
                 MarkerStroke = OxyColor.FromRgb(1, 0, 0),
                 LineStyle = LineStyle.Solid,
                 Title = "X1"
@@ -72,7 +71,6 @@ namespace ATT {
                 Title = "W2"
             });
             MyModel.Series.Add(new LineSeries {
-                BrokenLineStyle = LineStyle.Solid,
                 MarkerStroke = OxyColor.FromRgb(0, 1, 1),
                 LineStyle = LineStyle.Solid,
                 Title = "X2"
@@ -87,6 +85,7 @@ namespace ATT {
                 LineStyle = LineStyle.Solid,
                 Title = "Z2"
             });
+            MyModel.Series.Add(new AreaSeries()); //Area series for highlighting data marking
             MyModel.Axes.Add(new LinearAxis {
                 Position = AxisPosition.Left,
                 MajorGridlineStyle = LineStyle.Solid,
@@ -116,13 +115,11 @@ namespace ATT {
                 Title = "roll (x1-axis)"
             });
             MyModelEuler.Series.Add(new LineSeries {
-                BrokenLineStyle = LineStyle.Solid,
                 MarkerStroke = OxyColor.FromRgb(1, 0, 0),
                 LineStyle = LineStyle.Solid,
                 Title = "pitch (y1-axis)"
             });
             MyModelEuler.Series.Add(new LineSeries {
-                BrokenLineStyle = LineStyle.Solid,
                 MarkerStroke = OxyColor.FromRgb(0, 0, 1),
                 LineStyle = LineStyle.Solid,
                 Title = "yaw (z1-axis)"
@@ -133,13 +130,11 @@ namespace ATT {
                 Title = "roll (x2-axis)"
             });
             MyModelEuler.Series.Add(new LineSeries {
-                BrokenLineStyle = LineStyle.Solid,
                 MarkerStroke = OxyColor.FromRgb(1, 0, 0),
                 LineStyle = LineStyle.Solid,
                 Title = "pitch (y2-axis)"
             });
             MyModelEuler.Series.Add(new LineSeries {
-                BrokenLineStyle = LineStyle.Solid,
                 MarkerStroke = OxyColor.FromRgb(0, 1, 0),
                 LineStyle = LineStyle.Solid,
                 Title = "yaw (z2-axis)"
@@ -201,6 +196,12 @@ namespace ATT {
         private System.Threading.Timer timer1; // used for triggering UI updates every second
 
         IGpio[] gpio;
+
+        //marking flag
+        private bool changeBackGroundColor = false;
+        private bool renew = false;
+
+        private ushort MINIMUM_PRESSURE_TO_SIGNALIZE_PULLING_BABY = 1000; //Value must be calibrated. Max Value = 1023. Min Value = 0
 
         #endregion
 
@@ -401,9 +402,19 @@ namespace ATT {
                 (model.Series[4 * sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[0], (angleMode) ? angle : quat.W));
             }
             if ((bool)xyzCheckbox.IsChecked) {
-                (model.Series[5 * sensorNumber] as LineSeries).Points.Add(new DataPoint(samples[0], quat.X / denom));
-                (model.Series[5 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Y / denom));
-                (model.Series[5 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Z / denom));
+                (model.Series[4 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[0], quat.X / denom));
+                (model.Series[4 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Y / denom));
+                (model.Series[4 * sensorNumber + 3] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Z / denom));
+            }
+            if (renew) {
+                //model.Series.RemoveAt;
+                (model.Series).Add(new AreaSeries { Color = OxyColors.LightGray });
+                renew = false;
+                changeBackGroundColor = true;
+            }
+            if (changeBackGroundColor) {
+                (model.Series[model.Series.Count - 1] as AreaSeries).Points.Add(new DataPoint(samples[0], 400));
+                (model.Series[model.Series.Count - 1] as AreaSeries).Points2.Add(new DataPoint(samples[0], 0));
             }
 
             // Display values numerically
@@ -477,9 +488,17 @@ namespace ATT {
                         source.Stream((data =>
                         {
                             print("adc = " + data.Value<ushort>());
-                            //will center everytime small force is applied.
-                            if (data.Value<ushort>() < 1000)
-                                Center_Click(null, null);
+                            if (data.Value<ushort>() < MINIMUM_PRESSURE_TO_SIGNALIZE_PULLING_BABY) {
+                                //will center everytime small force is applied and wasn't changing color
+                                if (!changeBackGroundColor) {
+                                    Center_Click(null, null);
+                                    renew = true;
+                                }
+                            }
+                            //if it stops applying force, the graph will stop being highlighted
+                            else {
+                                changeBackGroundColor = false;
+                            }
                         }
                         )
                     ));
