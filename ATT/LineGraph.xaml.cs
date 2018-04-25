@@ -194,8 +194,12 @@ namespace ATT {
         StringBuilder[] csvEuler = { new StringBuilder(), new StringBuilder() }; // data storage, more efficient than string concatenation
         TextBlock[] textblocks = new TextBlock[4];
         private System.Threading.Timer timer1; // used for triggering UI updates every second
+        private System.Threading.Timer timer2; //used for triggering pressure sensor read every 200ms
+        private System.Threading.Timer timer3; // used for triggering UI updates every 10 seconds
 
-        IGpio[] gpio;
+        private IGpio[] gpio;
+        private ushort[] pressurePin;
+        
 
         //marking flag
         private bool changeBackGroundColor = false;
@@ -263,10 +267,14 @@ namespace ATT {
         public void InitFreqTimer() {
             timer1 = new System.Threading.Timer(displaySampleFreq, null, 0, 1000);
         }
+        //Initialize timer that calls a read from the pressure sensor every 200ms
+        public void InitPressureTimer() {
+            timer2 = new System.Threading.Timer(readPressureSensor, null, 0, 200);
+        }
 
         // Initialize timer that causes displayBatteryLevel() to be called every 10 seconds.
         public void InitBatteryTimer() {
-            timer1 = new System.Threading.Timer(displayBatteryLevel, null, 0, 10000);
+            timer3 = new System.Threading.Timer(displayBatteryLevel, null, 0, 10000);
         }
 
         // Display the battery level for each sensor as a percent.
@@ -290,7 +298,13 @@ namespace ATT {
 
             freq[0] = 0;
             freq[1] = 0;
-            gpio[0].Pins[0].Adc.Read(); //just did the reading for one board
+
+        }
+
+        private async void readPressureSensor(Object state) {
+            //reads the pressure value from both IO ports of only one board
+            gpio[0].Pins[0].Adc.Read();
+            gpio[0].Pins[1].Adc.Read();
 
         }
 
@@ -473,32 +487,32 @@ namespace ATT {
 
                 sensorFusions = new ISensorFusionBosch[numBoards];
                 gpio = new IGpio[numBoards];
+                pressurePin = new ushort[2]; //2 gpio pins being used for the pressure sensors
                 for (var j = 0; j < numBoards; j++) {
                     var i = j;
                     //test with GPIO
                     gpio[i] = metawears[i].GetModule<IGpio>();
-                    // output 0V on pin 0
+                    // output 0V on pin 0 and 1
                     gpio[i].Pins[0].ClearOutput();
-                    gpio[i].Pins[0].SetPullMode(PullMode.Up); // -> sets it to high (~1023). Once pressed, it will go to a lower value
+                    gpio[i].Pins[1].ClearOutput();
+                    // -> sets pins 0 and 1 to high (~1023). Once pressed, it will go to a lower value
+                    gpio[i].Pins[0].SetPullMode(PullMode.Up); 
+                    gpio[i].Pins[1].SetPullMode(PullMode.Up); 
 
                     // Get producer for analog adc data on pin 0
-                    IAnalogDataProducer adc = gpio[i].Pins[0].Adc;
+                    IAnalogDataProducer adc0 = gpio[i].Pins[0].Adc;
 
-                    await adc.AddRouteAsync(source =>
+                    await adc0.AddRouteAsync(source =>
                         source.Stream((data =>
                         {
-                            print("adc = " + data.Value<ushort>());
-                            if (data.Value<ushort>() < MINIMUM_PRESSURE_TO_SIGNALIZE_PULLING_BABY) {
-                                //will center everytime small force is applied and wasn't changing color
-                                if (!changeBackGroundColor) {
-                                    Center_Click(null, null);
-                                    renew = true;
-                                }
-                            }
-                            //if it stops applying force, the graph will stop being highlighted
-                            else {
-                                changeBackGroundColor = false;
-                            }
+                            verifyBabyGripPressure(data, 0);
+                        }
+                        )
+                    ));
+                    await gpio[i].Pins[1].Adc.AddRouteAsync(source =>
+                        source.Stream((data =>
+                        {
+                            verifyBabyGripPressure(data, 1);
                         }
                         )
                     ));
@@ -510,6 +524,7 @@ namespace ATT {
                 }
                 print("Sensor fusion should be running!");
                 InitFreqTimer();
+                InitPressureTimer();
                 Clear.Background = new SolidColorBrush(Windows.UI.Colors.Red);
             }
             else {
@@ -521,6 +536,25 @@ namespace ATT {
                     freq[i] = 0;
                 }
                 timer1.Dispose();
+                timer2.Dispose();
+            }
+        }
+
+        private void verifyBabyGripPressure(IData data, ushort gpioPin) {
+            pressurePin[gpioPin] = data.Value<ushort>();
+            print("adc" + gpioPin + "= " + pressurePin[gpioPin]);
+            //verifies if either the pressure from one gpioPin or the other signalizes baby grip
+            if (pressurePin[0] < MINIMUM_PRESSURE_TO_SIGNALIZE_PULLING_BABY || pressurePin[1] < MINIMUM_PRESSURE_TO_SIGNALIZE_PULLING_BABY) {
+                //will center everytime small force is applied and wasn't changing color
+                if (!changeBackGroundColor && !renew) { //state verification
+                    Center_Click(null, null);
+                    renew = true;
+                }
+            }
+            //if it stops applying force, the graph will stop being highlighted. Since the thread is called twice by each pressure sensor, the renew flag is
+            //checked to ensure the right state
+            else if(!renew) { 
+                changeBackGroundColor = false;
             }
         }
 
