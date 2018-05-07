@@ -206,7 +206,7 @@ namespace ATT {
         private bool renew = false;
 
         private ushort MINIMUM_PRESSURE_TO_SIGNALIZE_PULLING_BABY = 1000; //Value must be calibrated. Max Value = 1023. Min Value = 0
-
+        private bool RECORD_EVERYTHING_MODE = false;
         #endregion
 
 
@@ -428,7 +428,7 @@ namespace ATT {
             }
             if (changeBackGroundColor) {
                 (model.Series[model.Series.Count - 1] as AreaSeries).Points.Add(new DataPoint(samples[0], 400));
-                (model.Series[model.Series.Count - 1] as AreaSeries).Points2.Add(new DataPoint(samples[0], 0));
+                (model.Series[model.Series.Count - 1] as AreaSeries).Points2.Add(new DataPoint(samples[0], -400));
             }
 
             // Display values numerically
@@ -488,6 +488,7 @@ namespace ATT {
                 sensorFusions = new ISensorFusionBosch[numBoards];
                 gpio = new IGpio[numBoards];
                 pressurePin = new ushort[2]; //2 gpio pins being used for the pressure sensors
+                pressurePin[0] = 1023; pressurePin[1] = 1023;
                 for (var j = 0; j < numBoards; j++) {
                     var i = j;
                     //test with GPIO
@@ -548,6 +549,13 @@ namespace ATT {
                 //will center everytime small force is applied and wasn't changing color
                 if (!changeBackGroundColor && !renew) { //state verification
                     Center_Click(null, null);
+                    if (!RECORD_EVERYTHING_MODE) 
+                        Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () 
+                            => recordSwitch.IsOn = true);
+                    else {
+                        for (int i = 0; i < numBoards; i++)
+                            addPoint("+++", i);
+                    }
                     renew = true;
                 }
             }
@@ -555,6 +563,13 @@ namespace ATT {
             //checked to ensure the right state
             else if(!renew) { 
                 changeBackGroundColor = false;
+                if (!RECORD_EVERYTHING_MODE)
+                    Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, ()
+                        => recordSwitch.IsOn = false);
+                else {
+                    for (int i = 0; i < numBoards; i++)
+                        addPoint("---", i);
+                }
             }
         }
 
@@ -609,6 +624,7 @@ namespace ATT {
         // Store recordSwitch state.
         public async void recordSwitch_Toggled(Object sender, RoutedEventArgs e) {
             record = recordSwitch.IsOn;
+            print("Record Switch toggled!");
         }
 
 
