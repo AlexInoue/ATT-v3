@@ -13,7 +13,7 @@ using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using System.Runtime;
-
+using System.Windows.Input;
 
 namespace ATT {
 
@@ -93,6 +93,10 @@ namespace ATT {
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private async void continue_Click(Object sender, RoutedEventArgs e) {
+            ContentDialog initPopup = new ContentDialog() {
+                Title = "Initializing API",
+                Content = "Please wait while the app initializes the API"
+            };
             try {
                 var devices = pairedDevices.SelectedItems;
                 BluetoothLEDevice[] passDevices = new BluetoothLEDevice[devices.Count];
@@ -115,10 +119,6 @@ namespace ATT {
                 btleWatcher.Stop();
                 // var item = ((ListView)sender).SelectedItem as BluetoothLEDevice;
                 var i = 1;
-                ContentDialog initPopup = new ContentDialog() {
-                    Title = "Initializing API",
-                    Content = "Please wait while the app initializes the API"
-                };
                 initPopup.ShowAsync();
                 foreach (BluetoothLEDevice item in devices) {
                     if (item != null) {
@@ -135,16 +135,25 @@ namespace ATT {
                 initPopup.Hide();
             }
             catch (Exception ex) {
+                initPopup.Hide();
                 ContentDialog errorPopup = new ContentDialog() {
                     Title = "Timeout error",
                     Content = "A timeout error happened when initializing boards.",
                     PrimaryButtonText = "try again",
-                    PrimaryButtonCommand = { }, // try again button not functional yet
                     CloseButtonText = "Close"
                 };
-                await errorPopup.ShowAsync();
+                ContentDialogResult result = await errorPopup.ShowAsync();
+                if (result == ContentDialogResult.Primary)
+                    continue_Click(sender, e);
             }
         }
+
+        private ICommand continue_ClickRetry(object sender, RoutedEventArgs e) {
+            continue_Click(sender, e);
+            return null;
+        }
+
+
         #endregion
     }
 
