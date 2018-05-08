@@ -115,18 +115,16 @@ namespace ATT {
                 btleWatcher.Stop();
                 // var item = ((ListView)sender).SelectedItem as BluetoothLEDevice;
                 var i = 1;
+                ContentDialog initPopup = new ContentDialog() {
+                    Title = "Initializing API",
+                    Content = "Please wait while the app initializes the API"
+                };
+                initPopup.ShowAsync();
                 foreach (BluetoothLEDevice item in devices) {
                     if (item != null) {
                         passDevices[i - 1] = item;
-                        ContentDialog initPopup = new ContentDialog() {
-                            Title = "Initializing API",
-                            Content = "Please wait while the app initializes the API"
-                        };
-
-                        initPopup.ShowAsync();
                         var board = MbientLab.MetaWear.Win10.Application.GetMetaWearBoard(item);
                         await board.InitializeAsync();
-                        initPopup.Hide();
 
                         if (i == devices.Count) {
                             Frame.Navigate(config.NextPageType, passDevices);
@@ -134,6 +132,7 @@ namespace ATT {
                         i += 1;
                     }
                 }
+                initPopup.Hide();
             }
             catch (Exception ex) {
                 ContentDialog errorPopup = new ContentDialog() {
