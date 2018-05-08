@@ -206,7 +206,7 @@ namespace ATT {
         private bool renew = false;
 
         private ushort MINIMUM_PRESSURE_TO_SIGNALIZE_PULLING_BABY = 1000; //Value must be calibrated. Max Value = 1023. Min Value = 0
-        private bool RECORD_EVERYTHING_MODE = false;
+        private bool RECORD_EVERYTHING_MODE = false; //LEAVE AS FALSE. True mode hasn't been implemented yet.
         #endregion
 
 
@@ -316,6 +316,7 @@ namespace ATT {
                     await metawears[i].GetModule<IDebug>().DisconnectAsync();
                 }
             }
+            timer3.Dispose(); // disposes battery check timer, otherwise the software will try to read the battery when the board has already been disposed
             Frame.GoBack();
         }
 
