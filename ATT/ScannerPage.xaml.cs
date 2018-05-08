@@ -93,57 +93,45 @@ namespace ATT {
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private async void continue_Click(Object sender, RoutedEventArgs e) {
-            try {
-                var devices = pairedDevices.SelectedItems;
-                BluetoothLEDevice[] passDevices = new BluetoothLEDevice[devices.Count];
+            var devices = pairedDevices.SelectedItems;
+            BluetoothLEDevice[] passDevices = new BluetoothLEDevice[devices.Count];
 
-                //TODO: enable more than 2 devices, like 3
-                if (devices.Count == 0 || devices.Count > 2) {
-                    await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(
-                    CoreDispatcherPriority.Normal, async () =>
-                    {
-                        await new ContentDialog() {
-                            Title = "Invalid Number of Devices",
+            //TODO: enable more than 2 devices, like 3
+            if (devices.Count == 0 || devices.Count > 2) {
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(
+                CoreDispatcherPriority.Normal, async () =>
+                {
+                    await new ContentDialog() {
+                        Title = "Invalid Number of Devices",
                         //TODO: correct the 
                         Content = "Please select 1 or 2 sensors from the list of connected sensors to proceed.",
-                            PrimaryButtonText = "OK"
-                        }.ShowAsync();
-                    });
-                    return;
-                }
-
-                btleWatcher.Stop();
-                // var item = ((ListView)sender).SelectedItem as BluetoothLEDevice;
-                var i = 1;
-                foreach (BluetoothLEDevice item in devices) {
-                    if (item != null) {
-                        passDevices[i ] = item;
-                        ContentDialog initPopup = new ContentDialog() {
-                            Title = "Initializing API",
-                            Content = "Please wait while the app initializes the API"
-                        };
-
-                        initPopup.ShowAsync();
-                        var board = MbientLab.MetaWear.Win10.Application.GetMetaWearBoard(item);
-                        await board.InitializeAsync();
-                        initPopup.Hide();
-
-                        if (i == devices.Count) {
-                            Frame.Navigate(config.NextPageType, passDevices);
-                        }
-                        i += 1;
-                    }
-                }
+                        PrimaryButtonText = "OK"
+                    }.ShowAsync();
+                });
+                return;
             }
-            catch (Exception ex) {
-                ContentDialog errorPopup = new ContentDialog() {
-                    Title = "Timeout error",
-                    Content = "A timeout error happened when initializing boards.",
-                    PrimaryButtonText = "Try Again",
-                    PrimaryButtonCommand = { },
-                    CloseButtonText = "Close"
-                };
-                await errorPopup.ShowAsync();
+
+            btleWatcher.Stop();
+            // var item = ((ListView)sender).SelectedItem as BluetoothLEDevice;
+            var i = 1;
+            foreach (BluetoothLEDevice item in devices) {
+                if (item != null) {
+                    passDevices[i - 1] = item;
+                    ContentDialog initPopup = new ContentDialog() {
+                        Title = "Initializing API",
+                        Content = "Please wait while the app initializes the API"
+                    };
+
+                    initPopup.ShowAsync();
+                    var board = MbientLab.MetaWear.Win10.Application.GetMetaWearBoard(item);
+                    await board.InitializeAsync();
+                    initPopup.Hide();
+                   
+                    if (i == devices.Count) {
+                        Frame.Navigate(config.NextPageType, passDevices);
+                    }
+                    i += 1;
+                }
             }
         }
         #endregion
