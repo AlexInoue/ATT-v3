@@ -11,145 +11,125 @@
     <Page.DataContext>
         <local:MainViewModel/>
     </Page.DataContext>
-    <ScrollViewer
-        ZoomMode="Disabled" MaxZoomFactor="10" HorizontalScrollMode="Disabled" VerticalScrollMode="Enabled">
-        <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Margin="0,2,0,-2">
-            <Grid.RowDefinitions>
-                <RowDefinition />
-                <RowDefinition />
-                <RowDefinition Height="30" />
-            </Grid.RowDefinitions>
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Margin="0,2,0,-2">
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="30" />
+        </Grid.RowDefinitions>
 
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="350" />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid x:Name="controlGrid" Grid.Column="0" VerticalAlignment="Center">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="70"/>
+                <RowDefinition Height="70"/>
+                <RowDefinition Height="70"/>
+                <RowDefinition Height="70"/>
+                <RowDefinition Height="60"/>
+                <RowDefinition Height="70"/>
+                <RowDefinition Height="60"/>
+                <RowDefinition Height="20"/>
+                <RowDefinition Height="50"/>
+                <RowDefinition Height="80"/>
+
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="350" />
+                <ColumnDefinition />
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
-            <Grid x:Name="controlGrid" Grid.Column="0" VerticalAlignment="Center">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="70"/>
-                    <RowDefinition Height="70"/>
-                    <RowDefinition Height="70"/>
-                    <RowDefinition Height="70"/>
-                    <RowDefinition Height="60"/>
-                    <RowDefinition Height="70"/>
-                    <RowDefinition Height="60"/>
-                    <RowDefinition Height="20"/>
-                    <RowDefinition Height="50"/>
-                    <RowDefinition Height="80"/>
 
-                </Grid.RowDefinitions>
+            <Grid Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="10"></ColumnDefinition>
+                    <ColumnDefinition />
                     <ColumnDefinition />
                     <ColumnDefinition />
                 </Grid.ColumnDefinitions>
 
-                <Grid Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="30"></ColumnDefinition>
-                        <ColumnDefinition />
-                        <ColumnDefinition />
-                        <ColumnDefinition />
-                    </Grid.ColumnDefinitions>
-
-                    <ToggleSwitch x:Name="streamSwitch" Grid.Column="1" Header="Stream" HorizontalAlignment="Left" VerticalAlignment="Center" Toggled="streamSwitch_Toggled"/>
-                    <ToggleSwitch x:Name="recordSwitch" Grid.Column="2" Header="Record" HorizontalAlignment="Left" VerticalAlignment="Center" Toggled="recordSwitch_Toggled"/>
-                    <ToggleSwitch x:Name="angleSwitch" Grid.Column="3" Header="Angle Mode" HorizontalAlignment="Left" VerticalAlignment="Center" Toggled="angleSwitch_Toggled" />
-                </Grid>
-                <Grid Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition />
-                        <ColumnDefinition />
-                        <ColumnDefinition />
-                    </Grid.ColumnDefinitions>
-                    <CheckBox Grid.Column="0"  x:Name="wCheckbox" Content="W" IsChecked="False" HorizontalAlignment="Center" Margin="0,0,0,0" Checked="wChecked" FontSize="14"/>
-                    <CheckBox Grid.Column="1" x:Name="xyzCheckbox" Content="XYZ" IsChecked="False" HorizontalAlignment="Center" Checked="xyzChecked" FontSize="14"/>
-                    <CheckBox Grid.Column="2"  x:Name="eulerCheckbox" Content="Eul" IsChecked="False" HorizontalAlignment="Center" Checked="eulerChecked" FontSize="14"/>
-                </Grid>
-
-                <TextBlock Text="Frequency:" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" Height = "60"/>
-                <TextBlock Text="--" Grid.Row="3" x:Name="FrequencyTextBlock1" Foreground="Orange" Grid.Column="0" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
-                <TextBlock Text="--" Grid.Row="3" x:Name="FrequencyTextBlock2" Foreground="Blue" Grid.Column="1" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
-                <TextBlock Text="Battery:" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" Height = "60"/>
-                <TextBlock Text="--" Grid.Row="5" x:Name="BatteryTextBlock1" Foreground="Orange" Grid.Column="0" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
-                <TextBlock Text="--" Grid.Row="5" x:Name="BatteryTextBlock2" Foreground="Blue" Grid.Column="1" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
-                <Grid Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="6">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Button x:Name="Save" Grid.Column="0" Content="Save" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Save_Click" Height="50" Background="Green" Width="150"/>
-                    <Button x:Name="Clear" Grid.Column="1" Content="Clear" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Clear_Click" Height="50" Background="Gray" Width="150"/>
-                </Grid>
-
-                <Button x:Name="center" Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Content="Center" HorizontalAlignment="Stretch" VerticalAlignment="Center" Click="Center_Click" Height="50" Background="MediumPurple" Width="300"/>
-                <Grid Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="9">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition/>
-                        <ColumnDefinition/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="30"/>
-                        <RowDefinition/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Text="Date" HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Column="0"/>
-                    <TextBlock Text="Experiment #" HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Column="1"/>
-                    <TextBox Grid.Row="1" x:Name="dateTextBox" Grid.Column="0" Text="Date" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="56,9,0,9"/>
-                    <TextBox Grid.Row="1" x:Name="numberTextBox" Grid.Column="1" Text="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Grid>
-
+                <ToggleSwitch x:Name="streamSwitch" Grid.Column="1" Header="Stream" HorizontalAlignment="Left" VerticalAlignment="Center" Toggled="streamSwitch_Toggled"/>
+                <ToggleSwitch x:Name="recordSwitch" Grid.Column="2" Header="Record" HorizontalAlignment="Left" VerticalAlignment="Center" Toggled="recordSwitch_Toggled"/>
+                <ToggleSwitch x:Name="angleSwitch" Grid.Column="3" Header="Angle Mode" HorizontalAlignment="Left" VerticalAlignment="Center" Toggled="angleSwitch_Toggled" />
+            </Grid>
+            <Grid Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <CheckBox Grid.Column="0"  x:Name="wCheckbox" Content="W" IsChecked="False" HorizontalAlignment="Center" Margin="0,0,0,0" Checked="wChecked" FontSize="14"/>
+                <CheckBox Grid.Column="1" x:Name="xyzCheckbox" Content="XYZ" IsChecked="False" HorizontalAlignment="Center" Checked="xyzChecked" FontSize="14"/>
+                <CheckBox Grid.Column="2"  x:Name="eulerCheckbox" Content="Eul" IsChecked="False" HorizontalAlignment="Center" Checked="eulerChecked" FontSize="14"/>
             </Grid>
 
-
-            <Button x:Name="back" Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2" Content="Back" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="back_Click"/>
-            <TextBlock Text="--" x:Name="AverageFrequencyTextBlock" Grid.Column="0" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="77,-700,0,0" Height = "60"/>
-
-
-            <Grid Grid.Column="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="100"/>
-                    <RowDefinition Height="230"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <TextBlock Text="Angle Measurement" Grid.Row="0" VerticalAlignment="Center" FontSize="50" HorizontalAlignment="Center"/>
-                <Grid x:Name="dataGrid" Grid.Row="1" VerticalAlignment="Center">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="30"/>
-                        <RowDefinition Height="50"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Grid.Row="0" Text="Mac1" x:Name="Mac1" VerticalAlignment="Center" Foreground="Orange"  HorizontalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Grid.Row="0" Text="Mac2" x:Name="Mac2" VerticalAlignment="Center" Foreground="Blue" HorizontalAlignment="Center"/>
-                    <TextBox Grid.Column="0" Grid.Row="1" Text="sensor1" x:Name="Name1" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Grid.Row="1" Text="sensor2" x:Name="Name2" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                    <TextBlock Grid.Column="0" Grid.Row="2" Text="Sensor 1 Data" x:Name="DataTextBlock1" Foreground="Orange" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
-                    <TextBlock Grid.Column="1" Grid.Row="2" Text="Sensor 2 Data" x:Name="DataTextBlock2" Foreground="Blue" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
-                </Grid>
-                <oxy:PlotView Model="{Binding MyModel}" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
-            </Grid>
-            <Grid x:Name="eulerDataGrid" Grid.Row="1" HorizontalAlignment="Stretch" Height="550" VerticalAlignment="Stretch"  Grid.Column="0" >
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            <TextBlock Text="Frequency:" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" Height = "60"/>
+            <TextBlock Text="--" Grid.Row="3" x:Name="FrequencyTextBlock1" Foreground="Orange" Grid.Column="0" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
+            <TextBlock Text="--" Grid.Row="3" x:Name="FrequencyTextBlock2" Foreground="Blue" Grid.Column="1" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
+            <TextBlock Text="Battery:" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" Height = "60"/>
+            <TextBlock Text="--" Grid.Row="5" x:Name="BatteryTextBlock1" Foreground="Orange" Grid.Column="0" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
+            <TextBlock Text="--" Grid.Row="5" x:Name="BatteryTextBlock2" Foreground="Blue" Grid.Column="1" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Center" Height = "60"/>
+            <Grid Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="6">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.ColumnSpan="2" Grid.Column="0" Grid.Row="0" Text="Angle Data Sensor 1" x:Name="DataTextBlock3" Foreground="Red" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
-                <TextBlock Grid.ColumnSpan="2" Grid.Column="0" Grid.Row="1" Text="Angle Data Sensor 2" x:Name="DataTextBlock4" Foreground="Red" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
-                <Button x:Name="SaveEuler"  Grid.Row="2" Grid.Column="0" Content="Save" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Save_ClickEuler" Height="50" Background="Green" Width="150"/>
-                <Button x:Name="ClearEuler" Grid.Row="2" Grid.Column="1" Content="Clear" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Clear_Click" Height="50" Background="Gray" Width="150"/>
+                <Button x:Name="Save" Grid.Column="0" Content="Save" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Save_Click" Height="50" Background="Green" Width="150"/>
+                <Button x:Name="Clear" Grid.Column="1" Content="Clear" HorizontalAlignment="Center" VerticalAlignment="Center" Click="Clear_Click" Height="50" Background="Gray" Width="150"/>
             </Grid>
-            <Grid Grid.Row="1" HorizontalAlignment="Stretch" Height="550" VerticalAlignment="Stretch"  Grid.Column="1" Margin="0,100,0,100">
-                <oxy:PlotView Model="{Binding MyModelEuler}" HorizontalAlignment="Stretch"/>
+
+            <Button x:Name="center" Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Content="Center" HorizontalAlignment="Stretch" VerticalAlignment="Center" Click="Center_Click" Height="50" Background="MediumPurple" Width="300"/>
+            <Grid Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="9">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Date" HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Column="0"/>
+                <TextBlock Text="Experiment #" HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Column="1"/>
+                <TextBox Grid.Row="1" x:Name="dateTextBox" Grid.Column="0" Text="Date" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="56,9,0,9"/>
+                <TextBox Grid.Row="1" x:Name="numberTextBox" Grid.Column="1" Text="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Grid>
+
         </Grid>
-    </ScrollViewer>
 
+
+        <Button x:Name="back" Grid.Row="1" Grid.Column="0" Content="Back" HorizontalAlignment="Stretch" Click="back_Click" VerticalAlignment="Bottom" Margin="0,0,0,0"  />
+        <TextBlock Text="--" x:Name="AverageFrequencyTextBlock" Grid.Column="0" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="77,-700,0,0" Height = "60"/>
+        <ToggleButton Click= "regularGraphToggled" Grid.Column="1" Content="Axis Angle Deviation" Name="ToggleButtonGraph" Width="300" Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,400,0" IsChecked="True" />
+        <ToggleButton Click= "eulerGraphToggled" Grid.Column="1" Content="Multidirection Angle Deviation" Name="ToggleButtonEulerGraph" Width="300" Grid.Row="1" HorizontalAlignment="Center" Margin="400,0,0,0"/>
+
+
+        <Grid Name="GraphGrid" Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="100"/>
+                <RowDefinition Height="230"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock Text="Angle Measurement" Grid.Row="0" VerticalAlignment="Center" FontSize="50" HorizontalAlignment="Center"/>
+            <Grid x:Name="dataGrid" Grid.Row="1" VerticalAlignment="Center">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="50"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="Mac1" x:Name="Mac1" VerticalAlignment="Center" Foreground="Orange"  HorizontalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Grid.Row="0" Text="Mac2" x:Name="Mac2" VerticalAlignment="Center" Foreground="Blue" HorizontalAlignment="Center"/>
+                <TextBox Grid.Column="0" Grid.Row="1" Text="sensor1" x:Name="Name1" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <TextBox Grid.Column="1" Grid.Row="1" Text="sensor2" x:Name="Name2" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <TextBlock Grid.Column="0" Grid.Row="2" Text="Sensor 1 Data" x:Name="DataTextBlock1" Foreground="Orange" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
+                <TextBlock Grid.Column="1" Grid.Row="2" Text="Sensor 2 Data" x:Name="DataTextBlock2" Foreground="Blue" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
+            </Grid>
+            <oxy:PlotView Model="{Binding MyModel}" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+            <oxy:PlotView Model="{Binding MyModelEuler}" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Collapsed" />
+        </Grid>
+    </Grid>
 </Page>

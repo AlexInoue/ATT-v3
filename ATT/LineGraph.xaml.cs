@@ -158,8 +158,6 @@ namespace ATT {
             });
         }
 
-        
-
         public PlotModel MyModel { get; private set; }
         public PlotModel MyModelEuler { get; private set; }
     }
@@ -236,8 +234,6 @@ namespace ATT {
             //TODO: make this not hardcoded
             textblocks[0] = DataTextBlock1;
             textblocks[1] = DataTextBlock2;
-            textblocks[2] = DataTextBlock3;
-            textblocks[3] = DataTextBlock4;
 
             InitBatteryTimer();
 
@@ -246,7 +242,7 @@ namespace ATT {
             }
 
             model = (DataContext as MainViewModel).MyModel;
-            modelEuler = (DataContext as MainViewModel).MyModelEuler;
+            modelEuler = (DataContext as MainViewModel).MyModelEuler; // graph will be shown programatically but is already set
         }
 
         public void removeBoardTwoFormatting() {
@@ -255,8 +251,6 @@ namespace ATT {
             dataGrid.Children.Remove(Name2);
             dataGrid.ColumnDefinitions.RemoveAt(1);
 
-            eulerDataGrid.Children.Remove(DataTextBlock4);
-            eulerDataGrid.RowDefinitions.RemoveAt(1);
 
             controlGrid.Children.Remove(FrequencyTextBlock2);
             controlGrid.Children.Remove(BatteryTextBlock2);
@@ -400,8 +394,10 @@ namespace ATT {
         /// <param name="denom"> Denom value calculated</param>
         /// <param name="sensorNumber"> Number of the sensor used</param>
         private void plotValues(double angle, Quaternion quat, EulerAngles eulAng, double denom, int sensorNumber) {
-            plotEulerValues(angle, eulAng, denom, sensorNumber);
-            plotQuaternionValues(angle, quat, denom, sensorNumber);
+            if ((bool)ToggleButtonEulerGraph.IsChecked)
+                plotEulerValues(angle, eulAng, denom, sensorNumber);
+            else
+                plotQuaternionValues(angle, quat, denom, sensorNumber);
         }
 
         /// <summary>
@@ -421,16 +417,8 @@ namespace ATT {
                 (model.Series[4 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Y / denom));
                 (model.Series[4 * sensorNumber + 3] as LineSeries).Points.Add(new DataPoint(samples[0], quat.Z / denom));
             }
-            if (renew) {
-                //model.Series.RemoveAt;
-                (model.Series).Add(new AreaSeries { Color = OxyColors.LightGray });
-                renew = false;
-                changeBackGroundColor = true;
-            }
-            if (changeBackGroundColor) {
-                (model.Series[model.Series.Count - 1] as AreaSeries).Points.Add(new DataPoint(samples[0], 400));
-                (model.Series[model.Series.Count - 1] as AreaSeries).Points2.Add(new DataPoint(samples[0], -400));
-            }
+
+            setFlags(model);
 
             // Display values numerically
             double[] values = { angleMode ? angle : quat.W, (quat.X / denom), (quat.Y / denom), (quat.Z / denom) };
@@ -454,15 +442,31 @@ namespace ATT {
             double[] values = { eulerAngles.roll, eulerAngles.pitch, eulerAngles.yaw };
             String[] labels = { "X: ", "\nY: ", "\nZ: " };
             String s = createOrientationText(labels, values);
-            setText(eulerAngles.ToString(), sensorNumber + 2);
+            setText(eulerAngles.ToString(), sensorNumber);
 
             if ((bool)eulerCheckbox.IsChecked) {
                 (modelEuler.Series[3 * sensorNumber ] as LineSeries).Points.Add(new DataPoint(samples[0], eulerAngles.roll));
                 (modelEuler.Series[3 * sensorNumber + 1] as LineSeries).Points.Add(new DataPoint(samples[0], eulerAngles.pitch));
                 (modelEuler.Series[3 * sensorNumber + 2] as LineSeries).Points.Add(new DataPoint(samples[0], eulerAngles.yaw));
             }
+
+            setFlags(modelEuler);
+
             if ((bool)eulerCheckbox.IsChecked) {
                 resetModel(modelEuler);
+            }
+        }
+
+        private void setFlags(PlotModel model) {
+            if (renew) {
+                //model.Series.RemoveAt;
+                (model.Series).Add(new AreaSeries { Color = OxyColors.LightGray });
+                renew = false;
+                changeBackGroundColor = true;
+            }
+            if (changeBackGroundColor) {
+                (model.Series[model.Series.Count - 1] as AreaSeries).Points.Add(new DataPoint(samples[0], 400));
+                (model.Series[model.Series.Count - 1] as AreaSeries).Points2.Add(new DataPoint(samples[0], -400));
             }
         }
 
@@ -646,6 +650,19 @@ namespace ATT {
             modelEuler.Axes[0].Zoom(modelEuler.Axes[0].Minimum, modelEuler.Axes[0].Maximum);
         }
 
+        public async void eulerGraphToggled(Object sender, RoutedEventArgs e) {
+            if (!((bool)ToggleButtonEulerGraph.IsChecked)) {
+                ToggleButtonEulerGraph.IsChecked = true;
+            }
+            ToggleButtonGraph.IsChecked = false;
+        }
+        public async void regularGraphToggled(Object sender, RoutedEventArgs e) {
+            if (!((bool)ToggleButtonGraph.IsChecked)) {
+                ToggleButtonGraph.IsChecked = true;
+            }
+            ToggleButtonEulerGraph.IsChecked = false;
+        }
+
         // Change axes to adjust for new maximum values.
         public void resetYAxis() {
             model.InvalidatePlot(true);
@@ -815,7 +832,6 @@ namespace ATT {
 
             if (!isRunning) {
                 Clear.Background = new SolidColorBrush(Windows.UI.Colors.Gray);
-                ClearEuler.Background = new SolidColorBrush(Windows.UI.Colors.Gray);
             }
         }
 
