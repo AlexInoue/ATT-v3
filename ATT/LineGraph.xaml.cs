@@ -206,7 +206,7 @@ namespace ATT {
         private bool renew = false;
 
         private ushort MINIMUM_PRESSURE_TO_SIGNALIZE_PULLING_BABY = 1000; //Value must be calibrated. Max Value = 1023. Min Value = 0
-        private bool RECORD_EVERYTHING_MODE = false; //LEAVE AS FALSE. True mode hasn't been implemented yet.
+        private bool RECORD_EVERYTHING_MODE = true; 
         #endregion
 
 
@@ -553,9 +553,9 @@ namespace ATT {
                     if (!RECORD_EVERYTHING_MODE) 
                         Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () 
                             => recordSwitch.IsOn = true);
-                    else {
+                    else if (record){
                         for (int i = 0; i < numBoards; i++)
-                            addPoint("+++", i);
+                            addPoint(Environment.NewLine + "+++" + Environment.NewLine, i);
                     }
                     renew = true;
                 }
@@ -563,14 +563,14 @@ namespace ATT {
             //if it stops applying force, the graph will stop being highlighted. Since the thread is called twice by each pressure sensor, the renew flag is
             //checked to ensure the right state
             else if(!renew) { 
-                changeBackGroundColor = false;
                 if (!RECORD_EVERYTHING_MODE)
                     Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, ()
                         => recordSwitch.IsOn = false);
-                else {
+                else if (record && changeBackGroundColor) {
                     for (int i = 0; i < numBoards; i++)
-                        addPoint("---", i);
+                        addPoint("---" + Environment.NewLine + Environment.NewLine, i);
                 }
+                changeBackGroundColor = false;
             }
         }
 
