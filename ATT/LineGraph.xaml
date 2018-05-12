@@ -100,10 +100,10 @@
         <Button x:Name="back" Grid.Row="1" Grid.Column="0" Content="Back" HorizontalAlignment="Stretch" Click="back_Click" VerticalAlignment="Bottom" Margin="0,0,0,0"  />
         <TextBlock Text="--" x:Name="AverageFrequencyTextBlock" Grid.Column="0" FontSize="30" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="77,-700,0,0" Height = "60"/>
         <ToggleButton Click= "regularGraphToggled" Grid.Column="1" Content="Axis Angle Deviation" Name="ToggleButtonGraph" Width="300" Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,400,0" IsChecked="True" />
-        <ToggleButton Click= "eulerGraphToggled" Grid.Column="1" Content="Multidirection Angle Deviation" Name="ToggleButtonEulerGraph" Width="300" Grid.Row="1" HorizontalAlignment="Center" Margin="400,0,0,0"/>
+        <ToggleButton Click= "eulerGraphToggled" Grid.Column="1" Content="Multidirection Angle Deviation" Name="ToggleButtonEulerGraph" Width="300" Grid.Row="1" HorizontalAlignment="Center" Margin="400,0,0,0" IsChecked="FALSE"/>
 
 
-        <Grid Name="GraphGrid" Grid.Column="1">
+        <Grid Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="100"/>
                 <RowDefinition Height="230"/>
@@ -128,8 +128,10 @@
                 <TextBlock Grid.Column="0" Grid.Row="2" Text="Sensor 1 Data" x:Name="DataTextBlock1" Foreground="Orange" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
                 <TextBlock Grid.Column="1" Grid.Row="2" Text="Sensor 2 Data" x:Name="DataTextBlock2" Foreground="Blue" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
             </Grid>
-            <oxy:PlotView Model="{Binding MyModel}" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
-            <oxy:PlotView Model="{Binding MyModelEuler}" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Collapsed" />
+            <Grid Name="GraphGrid" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <oxy:PlotView Model="{Binding MyModel}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                <oxy:PlotView Model="{Binding MyModelEuler}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+            </Grid>
         </Grid>
     </Grid>
 </Page>

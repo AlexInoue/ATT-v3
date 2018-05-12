@@ -651,16 +651,29 @@ namespace ATT {
         }
 
         public async void eulerGraphToggled(Object sender, RoutedEventArgs e) {
-            if (!((bool)ToggleButtonEulerGraph.IsChecked)) {
+            //if made to not untoggle the button
+            if (!((bool)ToggleButtonEulerGraph.IsChecked)) 
                 ToggleButtonEulerGraph.IsChecked = true;
-            }
-            ToggleButtonGraph.IsChecked = false;
+            ToggleButtonGraph.IsChecked = false; //untoggle the other graph so that only one graph is shown at a time
+            showGraph(true);
         }
+        private void showGraph(bool showEuler) {
+            Visibility eulerVisible;
+            if (showEuler)
+                eulerVisible = Visibility.Visible; //visible = 0
+            else
+                eulerVisible = Visibility.Collapsed; //Collapsed = 1
+            ((Windows.UI.Xaml.UIElement)VisualTreeHelper.GetChild(GraphGrid, 1)).Visibility = eulerVisible;
+            ((Windows.UI.Xaml.UIElement)VisualTreeHelper.GetChild(GraphGrid, 0)).Visibility = (Visibility)Math.Abs((int)eulerVisible - 1);
+        }
+
         public async void regularGraphToggled(Object sender, RoutedEventArgs e) {
+            //if made to not untoggle the button
             if (!((bool)ToggleButtonGraph.IsChecked)) {
                 ToggleButtonGraph.IsChecked = true;
             }
-            ToggleButtonEulerGraph.IsChecked = false;
+            ToggleButtonEulerGraph.IsChecked = false; //untoggle the other graph so that only one graph is shown at a time
+            showGraph(false);
         }
 
         // Change axes to adjust for new maximum values.
