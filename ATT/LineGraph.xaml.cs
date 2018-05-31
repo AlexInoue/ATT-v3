@@ -204,7 +204,9 @@ namespace ATT {
         private bool renew = false;
 
         private ushort MINIMUM_PRESSURE_TO_SIGNALIZE_PULLING_BABY = 1000; //Value must be calibrated. Max Value = 1023. Min Value = 0
-        private bool RECORD_EVERYTHING_MODE = true; 
+        private bool RECORD_EVERYTHING_MODE = true; //if this flag is false, once the pressure sensor is pressed the data will start to be recorded
+                                                    //if this flag is true, you have to manually toggle record to save data and the pressure sensor
+                                                    //and you can know when the sensor is pressed because it is signaled in the data
         #endregion
 
 
@@ -304,13 +306,13 @@ namespace ATT {
 
         // Go back to the main page (sensor selection)
         private async void back_Click(object sender, RoutedEventArgs e) {
+            timer3.Dispose(); // disposes battery check timer, otherwise the software will try to read the battery when the board has already been disposed
             for (var i = 0; i < numBoards; i++) {
                 if (!metawears[i].InMetaBootMode) {
                     metawears[i].TearDown();
                     await metawears[i].GetModule<IDebug>().DisconnectAsync();
                 }
             }
-            timer3.Dispose(); // disposes battery check timer, otherwise the software will try to read the battery when the board has already been disposed
             Frame.GoBack();
         }
 
@@ -663,8 +665,8 @@ namespace ATT {
                 eulerVisible = Visibility.Visible; //visible = 0
             else
                 eulerVisible = Visibility.Collapsed; //Collapsed = 1
-            ((Windows.UI.Xaml.UIElement)VisualTreeHelper.GetChild(GraphGrid, 1)).Visibility = eulerVisible;
-            ((Windows.UI.Xaml.UIElement)VisualTreeHelper.GetChild(GraphGrid, 0)).Visibility = (Visibility)Math.Abs((int)eulerVisible - 1);
+            ((Windows.UI.Xaml.UIElement)VisualTreeHelper.GetChild(GraphGrid, 0)).Visibility = eulerVisible;
+            ((Windows.UI.Xaml.UIElement)VisualTreeHelper.GetChild(GraphGrid, 1)).Visibility = (Visibility)Math.Abs((int)eulerVisible - 1);
         }
 
         public async void regularGraphToggled(Object sender, RoutedEventArgs e) {

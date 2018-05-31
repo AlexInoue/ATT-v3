@@ -129,8 +129,8 @@
                 <TextBlock Grid.Column="1" Grid.Row="2" Text="Sensor 2 Data" x:Name="DataTextBlock2" Foreground="Blue" FontSize="25" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0"/>
             </Grid>
             <Grid Name="GraphGrid" Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <oxy:PlotView Model="{Binding MyModel}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
                 <oxy:PlotView Model="{Binding MyModelEuler}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                <oxy:PlotView Model="{Binding MyModel}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Visible"/>
             </Grid>
         </Grid>
     </Grid>
