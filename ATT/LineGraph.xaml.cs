@@ -852,7 +852,7 @@ namespace ATT {
 
         private void Center_Click(object sender, RoutedEventArgs e) {
             for (int i = 0; i < numBoards; i++)
-                addPoint(Environment.NewLine + "+++" + Environment.NewLine, i);
+                addPoint("****" + Environment.NewLine, i);
             shouldCenter[0] = true;
             shouldCenter[1] = true;
         }
